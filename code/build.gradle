@@ -143,6 +143,11 @@ sourceSets {
     }
 }
 
+// Make sourcesJar depend on grammar generation tasks
+tasks.named('sourcesJar') {
+    dependsOn generateGrammars, generateGrammarSource
+}
+
 // Configure JavaDoc
 javadoc {
     options.addStringOption('Xdoclint:none', '-quiet')
