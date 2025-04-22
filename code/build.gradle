@@ -1,0 +1,262 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id 'jacoco'
+    id 'antlr'
+    id 'biz.aQute.bnd.builder' version '7.0.0'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.googlecode.cqengine'
+version = '3.6.1'
+description = 'Collection Query Engine: NoSQL indexing and query engine for Java collections with ultra-low latency'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Main dependencies
+    implementation 'com.googlecode.concurrent-trees:concurrent-trees:2.6.1'
+    implementation 'org.javassist:javassist:3.30.2-GA'
+    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+    implementation 'com.esotericsoftware:kryo:5.2.0'
+    implementation('de.javakaffee:kryo-serializers:0.45') {
+        exclude group: 'com.esotericsoftware.kryo', module: 'kryo'
+    }
+    implementation 'org.antlr:antlr4-runtime:4.10.1'
+    implementation 'net.jodah:typetools:0.6.3'
+
+    // ANTLR grammar generation
+    antlr 'org.antlr:antlr4:4.10.1'
+
+    // Test dependencies
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.tngtech.java:junit-dataprovider:1.13.1'
+    testImplementation 'com.google.guava:guava-testlib:33.0.0-jre'
+    testImplementation 'nl.jqno.equalsverifier:equalsverifier:3.15.5'
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.10'
+    testImplementation 'net.bytebuddy:byte-buddy-agent:1.14.10'
+    testImplementation('org.mockito:mockito-core:5.8.0') {
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+        exclude group: 'net.bytebuddy', module: 'byte-buddy'
+        exclude group: 'net.bytebuddy', module: 'byte-buddy-agent'
+    }
+}
+
+// Disable the ANTLR plugin's grammar generation
+sourceSets {
+    main {
+        antlr {
+            srcDir 'src/main/antlr4'
+            include 'none'  // Don't include any grammar files for the plugin
+        }
+    }
+}
+
+// Create a task to manually generate the grammar files
+task generateGrammars(type: JavaExec) {
+    description = 'Generates Java sources from ANTLR grammars'
+    group = 'build'
+
+    // Use the ANTLR tool directly
+    classpath = configurations.antlr
+    main = 'org.antlr.v4.Tool'
+
+    // Create output directory
+    def outputDir = file("${project.buildDir}/generated-src/antlr/main")
+    outputs.dir(outputDir)
+
+    // Create the output directory if it doesn't exist
+    doFirst {
+        outputDir.mkdirs()
+    }
+
+    // Generate both grammars
+    args = [
+        '-visitor',
+        '-long-messages',
+        '-lib', file('src/main/antlr4/imports').absolutePath,
+        '-package', 'com.googlecode.cqengine.query.parser.cqn.grammar',
+        '-o', outputDir.absolutePath,
+        file('src/main/antlr4/com/googlecode/cqengine/query/parser/cqn/grammar/CQNGrammar.g4').absolutePath,
+
+        '-visitor',
+        '-long-messages',
+        '-lib', file('src/main/antlr4/imports').absolutePath,
+        '-package', 'com.googlecode.cqengine.query.parser.sql.grammar',
+        '-o', outputDir.absolutePath,
+        file('src/main/antlr4/com/googlecode/cqengine/query/parser/sql/grammar/SQLGrammar.g4').absolutePath
+    ]
+
+    maxHeapSize = "64m"
+}
+
+// Make compileJava depend on the grammar generation task
+compileJava.dependsOn generateGrammars
+
+// Ensure the Java compiler can find the generated source files
+sourceSets {
+    main {
+        java {
+            srcDir "${project.buildDir}/generated-src/antlr/main"
+            srcDir "${project.buildDir}/generated-src/antlr/antlr4"
+        }
+    }
+}
+
+// Configure JavaDoc
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.source = '8'
+}
+
+// Configure tests
+test {
+    useJUnit()
+    systemProperty 'cqengine.skip.slow.scenarios', System.getProperty('cqengine.skip.slow.scenarios', 'false')
+    jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+}
+
+// Configure JaCoCo
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                'com/googlecode/cqengine/query/parser/*/grammar/*',
+                'com/googlecode/cqengine/query/parser/cqn/support/ApacheSolrDataMathParser.*'
+            ])
+        }))
+    }
+}
+
+// Configure JAR
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version,
+            'Implementation-Vendor': 'Niall Gallagher'
+        )
+    }
+}
+
+// Configure Shadow plugin for creating a fat JAR with relocated packages
+shadowJar {
+    archiveClassifier = 'all'
+    mergeServiceFiles()
+
+    // Exclude signature files to avoid invalid signature errors
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+
+    // Configure package relocations to match Maven Shade plugin configuration
+    relocate 'com.googlecode.concurrenttrees', 'com.googlecode.cqengine.lib.com.googlecode.concurrenttrees'
+    relocate 'com.esotericsoftware', 'com.googlecode.cqengine.lib.com.esotericsoftware'
+    relocate 'org', 'com.googlecode.cqengine.lib.org'
+    relocate 'de', 'com.googlecode.cqengine.lib.de'
+    relocate 'javassist', 'com.googlecode.cqengine.lib.javassist'
+    relocate 'com.google', 'com.googlecode.cqengine.lib.com.google'
+    relocate 'net.jodah', 'com.googlecode.cqengine.lib.net.jodah'
+
+    // Don't relocate SQLite as it will be unable to load its native library
+    relocate('org.sqlite', 'org.sqlite') {
+        exclude 'org.sqlite.**'
+    }
+
+    // Don't relocate CQEngine's own classes
+    relocate('com.googlecode.cqengine', 'com.googlecode.cqengine') {
+        exclude 'com.googlecode.cqengine.**'
+    }
+
+    manifest {
+        attributes(
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version,
+            'Implementation-Vendor': 'Niall Gallagher'
+        )
+    }
+}
+
+// Configure publishing
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'CQEngine'
+                description = project.description
+                url = 'http://code.google.com/p/cqengine/'
+
+                licenses {
+                    license {
+                        name = 'The Apache Software License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution = 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'npgall'
+                        name = 'Niall Gallagher'
+                        email = 'niall@npgall.com'
+                    }
+                }
+
+                scm {
+                    url = 'https://github.com/npgall/cqengine.git'
+                    connection = 'scm:git:https://github.com/npgall/cqengine.git'
+                    developerConnection = 'scm:git:git@github.com:npgall/cqengine.git'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'sonatype'
+            url = version.endsWith('SNAPSHOT') ?
+                'https://oss.sonatype.org/content/repositories/snapshots/' :
+                'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            credentials {
+                username = project.hasProperty('ossrhUsername') ? ossrhUsername : ''
+                password = project.hasProperty('ossrhPassword') ? ossrhPassword : ''
+            }
+        }
+    }
+}
+
+// Configure signing
+signing {
+    required { gradle.taskGraph.hasTask("publish") }
+    sign publishing.publications.mavenJava
+}
+
+// Add a task to check license headers
+tasks.register('checkLicense') {
+    // This would need a custom implementation or a plugin like license-gradle-plugin
+    // For now, just a placeholder
+    doLast {
+        println "License check would be performed here"
+    }
+}

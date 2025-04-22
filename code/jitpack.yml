@@ -1,2 +1,5 @@
 jdk:
   - openjdk11
+
+build:
+  script: ./gradlew clean build
