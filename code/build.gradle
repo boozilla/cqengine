@@ -5,8 +5,8 @@ plugins {
     id 'signing'
     id 'jacoco'
     id 'antlr'
-    id 'biz.aQute.bnd.builder' version '7.0.0'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'biz.aQute.bnd.builder' version '6.4.0'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 group = 'com.googlecode.cqengine'
@@ -124,12 +124,15 @@ javadoc {
 test {
     useJUnit()
     systemProperty 'cqengine.skip.slow.scenarios', System.getProperty('cqengine.skip.slow.scenarios', 'false')
-    jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+    // Only add the --add-opens argument for Java 9+
+    if (JavaVersion.current().isJava9Compatible()) {
+        jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+    }
 }
 
 // Configure JaCoCo
 jacoco {
-    toolVersion = "0.8.11"
+    toolVersion = "0.8.7"
 }
 
 jacocoTestReport {
