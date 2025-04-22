@@ -33,11 +33,11 @@ dependencies {
     implementation('de.javakaffee:kryo-serializers:0.45') {
         exclude group: 'com.esotericsoftware.kryo', module: 'kryo'
     }
-    implementation 'org.antlr:antlr4-runtime:4.10.1'
+    implementation 'org.antlr:antlr4-runtime:4.7.2'
     implementation 'net.jodah:typetools:0.6.3'
 
     // ANTLR grammar generation
-    antlr 'org.antlr:antlr4:4.10.1'
+    antlr 'org.antlr:antlr4:4.7.2'
 
     // Test dependencies
     testImplementation 'junit:junit:4.13.2'

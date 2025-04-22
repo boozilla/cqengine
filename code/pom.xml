@@ -75,7 +75,7 @@
                 <!-- Add OSGi entries to jar manifest -->
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-maven-plugin</artifactId>
-                <version>7.0.0</version>
+                <version>6.4.0</version>
                 <configuration>
                     <bnd><![CDATA[-exportcontents:com.googlecode.cqengine.*]]></bnd>
                 </configuration>
@@ -219,7 +219,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.11</version>
+                <version>0.8.7</version>
                 <executions>
                     <execution>
                         <id>default-prepare-agent</id>
@@ -254,7 +254,7 @@
             <plugin>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-maven-plugin</artifactId>
-                <version>4.10.1</version>
+                <version>4.7.2</version>
                 <executions>
                     <execution>
                         <id>antlr</id>
@@ -302,7 +302,7 @@
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
-            <version>4.10.1</version>
+            <version>4.7.2</version>
         </dependency>
         <dependency>
             <groupId>net.jodah</groupId>
