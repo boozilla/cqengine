@@ -63,9 +63,9 @@ sourceSets {
     }
 }
 
-// Create a task to manually generate the grammar files
-task generateGrammars(type: JavaExec) {
-    description = 'Generates Java sources from ANTLR grammars'
+// Create tasks to manually generate the grammar files
+task generateCQNGrammar(type: JavaExec) {
+    description = 'Generates Java sources from CQN ANTLR grammar'
     group = 'build'
 
     // Use the ANTLR tool directly
@@ -81,15 +81,38 @@ task generateGrammars(type: JavaExec) {
         outputDir.mkdirs()
     }
 
-    // Generate both grammars
+    // Generate CQN grammar
     args = [
         '-visitor',
         '-long-messages',
         '-lib', file('src/main/antlr4/imports').absolutePath,
         '-package', 'com.googlecode.cqengine.query.parser.cqn.grammar',
         '-o', outputDir.absolutePath,
-        file('src/main/antlr4/com/googlecode/cqengine/query/parser/cqn/grammar/CQNGrammar.g4').absolutePath,
+        file('src/main/antlr4/com/googlecode/cqengine/query/parser/cqn/grammar/CQNGrammar.g4').absolutePath
+    ]
 
+    maxHeapSize = "64m"
+}
+
+task generateSQLGrammar(type: JavaExec) {
+    description = 'Generates Java sources from SQL ANTLR grammar'
+    group = 'build'
+
+    // Use the ANTLR tool directly
+    classpath = configurations.antlr
+    main = 'org.antlr.v4.Tool'
+
+    // Create output directory
+    def outputDir = file("${project.buildDir}/generated-src/antlr/main")
+    outputs.dir(outputDir)
+
+    // Create the output directory if it doesn't exist
+    doFirst {
+        outputDir.mkdirs()
+    }
+
+    // Generate SQL grammar
+    args = [
         '-visitor',
         '-long-messages',
         '-lib', file('src/main/antlr4/imports').absolutePath,
@@ -101,6 +124,13 @@ task generateGrammars(type: JavaExec) {
     maxHeapSize = "64m"
 }
 
+// Create a task to generate all grammars
+task generateGrammars {
+    description = 'Generates all ANTLR grammars'
+    group = 'build'
+    dependsOn generateCQNGrammar, generateSQLGrammar
+}
+
 // Make compileJava depend on the grammar generation task
 compileJava.dependsOn generateGrammars
 
@@ -108,7 +138,7 @@ compileJava.dependsOn generateGrammars
 sourceSets {
     main {
         java {
-            srcDir "${project.buildDir}/generated-src/antlr/antlr4"
+            srcDir "${project.buildDir}/generated-src/antlr/main"
         }
     }
 }
