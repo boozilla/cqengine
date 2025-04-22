@@ -1,3 +1,7 @@
+# CQEngine
+
+[![Release](https://jitpack.io/v/boozilla/cqengine.svg)](https://jitpack.io/#boozilla/cqengine)
+
 # Gradle Migration Guide
 
 This project has been migrated from Maven to Gradle. This document provides information about the migration and how to use the new Gradle build.
