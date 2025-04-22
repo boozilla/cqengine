@@ -4,7 +4,7 @@ This project has been migrated from Maven to Gradle. This document provides info
 
 ## Prerequisites
 
-- Java 8 or higher
+- Java 11 or higher
 - Gradle 8.5 or higher (optional, as the Gradle Wrapper is included)
 
 ## Getting Started

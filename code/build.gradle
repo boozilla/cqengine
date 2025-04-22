@@ -14,8 +14,8 @@ version = '3.6.1'
 description = 'Collection Query Engine: NoSQL indexing and query engine for Java collections with ultra-low latency'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
     withJavadocJar()
     withSourcesJar()
 }
@@ -33,11 +33,11 @@ dependencies {
     implementation('de.javakaffee:kryo-serializers:0.45') {
         exclude group: 'com.esotericsoftware.kryo', module: 'kryo'
     }
-    implementation 'org.antlr:antlr4-runtime:4.7.2'
+    implementation 'org.antlr:antlr4-runtime:4.13.2'
     implementation 'net.jodah:typetools:0.6.3'
 
     // ANTLR grammar generation
-    antlr 'org.antlr:antlr4:4.7.2'
+    antlr 'org.antlr:antlr4:4.13.2'
 
     // Test dependencies
     testImplementation 'junit:junit:4.13.2'
@@ -116,7 +116,7 @@ sourceSets {
 // Configure JavaDoc
 javadoc {
     options.addStringOption('Xdoclint:none', '-quiet')
-    options.source = '8'
+    options.source = '11'
 }
 
 // Configure tests
