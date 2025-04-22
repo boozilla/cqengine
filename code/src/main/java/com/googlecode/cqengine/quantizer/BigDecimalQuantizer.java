@@ -65,20 +65,20 @@ public class BigDecimalQuantizer {
      * Returns a {@link Quantizer} which converts the input value to the nearest multiple of the compression
      * factor, in the direction towards zero.
      * <p/>
-     * <b>Examples (compression factor 5):</b><br/>
-     * <ul>
-     *     <li>Input value 0.0 -> 0</li>
-     *     <li>Input value 4.2 -> 0</li>
-     *     <li>Input value 5.0 -> 5</li>
-     *     <li>Input value 9.9 -> 5</li>
-     *     <li>Input value -0.0 -> 0</li>
-     *     <li>Input value -4.2 -> 0</li>
-     *     <li>Input value -5.0 -> -5</li>
-     *     <li>Input value -9.9 -> -5</li>
-     * </ul>
+     * &lt;b&gt;Examples (compression factor 5):&lt;/b&gt;&lt;br/&gt;
+     * &lt;ul&gt;
+     *     &lt;li&gt;Input value 0.0 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value 4.2 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value 5.0 -&gt; 5&lt;/li&gt;
+     *     &lt;li&gt;Input value 9.9 -&gt; 5&lt;/li&gt;
+     *     &lt;li&gt;Input value -0.0 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value -4.2 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value -5.0 -&gt; -5&lt;/li&gt;
+     *     &lt;li&gt;Input value -9.9 -&gt; -5&lt;/li&gt;
+     * &lt;/ul&gt;
      *
-     * @param compressionFactor The number of adjacent mathematical integers to coalesce to a single key. <b>Supply a
-     * factor < 2 to disable compression</b> and simply truncate everything after the decimal point
+     * @param compressionFactor The number of adjacent mathematical integers to coalesce to a single key. &lt;b&gt;Supply a
+     * factor &lt; 2 to disable compression&lt;/b&gt; and simply truncate everything after the decimal point
      * @return A {@link Quantizer} which converts the input value to the closest multiple of the compression
      * factor, in the direction towards zero
      */

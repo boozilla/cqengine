@@ -64,16 +64,16 @@ sourceSets {
 }
 
 // Create tasks to manually generate the grammar files
-task generateCQNGrammar(type: JavaExec) {
+tasks.register('generateCQNGrammar', JavaExec) {
     description = 'Generates Java sources from CQN ANTLR grammar'
     group = 'build'
 
     // Use the ANTLR tool directly
     classpath = configurations.antlr
-    main = 'org.antlr.v4.Tool'
+    mainClass = 'org.antlr.v4.Tool'
 
     // Create output directory
-    def outputDir = file("${project.buildDir}/generated-src/antlr/main")
+    def outputDir = file("${layout.buildDirectory.get()}/generated-src/antlr/main")
     outputs.dir(outputDir)
 
     // Create the output directory if it doesn't exist
@@ -94,16 +94,16 @@ task generateCQNGrammar(type: JavaExec) {
     maxHeapSize = "64m"
 }
 
-task generateSQLGrammar(type: JavaExec) {
+tasks.register('generateSQLGrammar', JavaExec) {
     description = 'Generates Java sources from SQL ANTLR grammar'
     group = 'build'
 
     // Use the ANTLR tool directly
     classpath = configurations.antlr
-    main = 'org.antlr.v4.Tool'
+    mainClass = 'org.antlr.v4.Tool'
 
     // Create output directory
-    def outputDir = file("${project.buildDir}/generated-src/antlr/main")
+    def outputDir = file("${layout.buildDirectory.get()}/generated-src/antlr/main")
     outputs.dir(outputDir)
 
     // Create the output directory if it doesn't exist
@@ -125,27 +125,27 @@ task generateSQLGrammar(type: JavaExec) {
 }
 
 // Create a task to generate all grammars
-task generateGrammars {
+tasks.register('generateGrammars') {
     description = 'Generates all ANTLR grammars'
     group = 'build'
-    dependsOn generateCQNGrammar, generateSQLGrammar
+    dependsOn tasks.named('generateCQNGrammar'), tasks.named('generateSQLGrammar')
 }
 
 // Make compileJava depend on the grammar generation task
-compileJava.dependsOn generateGrammars
+compileJava.dependsOn tasks.named('generateGrammars')
 
 // Ensure the Java compiler can find the generated source files
 sourceSets {
     main {
         java {
-            srcDir "${project.buildDir}/generated-src/antlr/main"
+            srcDir "${layout.buildDirectory.get()}/generated-src/antlr/main"
         }
     }
 }
 
 // Make sourcesJar depend on grammar generation tasks
 tasks.named('sourcesJar') {
-    dependsOn generateGrammars, generateGrammarSource
+    dependsOn tasks.named('generateGrammars'), tasks.named('generateGrammarSource')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 

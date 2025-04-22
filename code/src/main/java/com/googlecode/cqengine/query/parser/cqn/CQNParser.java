@@ -33,7 +33,7 @@ import java.util.Map;
  * A parser for CQN queries - CQEngine-Native syntax.
  * <p/>
  * CQN syntax is based on how CQEngine queries look in native Java code, and the format returned by
- * {@link Query#toString()}.
+ * the toString() method of {@link Query} objects.
  *
  * @author Niall Gallagher
  */

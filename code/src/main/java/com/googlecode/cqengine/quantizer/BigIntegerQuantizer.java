@@ -54,18 +54,18 @@ public class BigIntegerQuantizer {
      * Returns a {@link Quantizer} which converts the input value to the nearest multiple of the compression
      * factor, in the direction towards zero.
      * <p/>
-     * <b>Examples (compression factor 5):</b><br/>
-     * <ul>
-     *     <li>Input value 0 -> 0</li>
-     *     <li>Input value 4 -> 0</li>
-     *     <li>Input value 5 -> 5</li>
-     *     <li>Input value 9 -> 5</li>
-     *     <li>Input value -4 -> 0</li>
-     *     <li>Input value -5 -> -5</li>
-     *     <li>Input value -9 -> -5</li>
-     * </ul>
+     * &lt;b&gt;Examples (compression factor 5):&lt;/b&gt;&lt;br/&gt;
+     * &lt;ul&gt;
+     *     &lt;li&gt;Input value 0 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value 4 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value 5 -&gt; 5&lt;/li&gt;
+     *     &lt;li&gt;Input value 9 -&gt; 5&lt;/li&gt;
+     *     &lt;li&gt;Input value -4 -&gt; 0&lt;/li&gt;
+     *     &lt;li&gt;Input value -5 -&gt; -5&lt;/li&gt;
+     *     &lt;li&gt;Input value -9 -&gt; -5&lt;/li&gt;
+     * &lt;/ul&gt;
      *
-     * @param compressionFactor The number of adjacent mathematical integers (>= 2) to coalesce to a single key
+     * @param compressionFactor The number of adjacent mathematical integers (&gt;= 2) to coalesce to a single key
      * @return A {@link Quantizer} which converts the input value to the nearest multiple of the compression
      * factor, in the direction towards zero
      */

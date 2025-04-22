@@ -37,7 +37,7 @@ public class AttributeNameProducers {
      * to a more human readable form, by stripping the getter prefix and converting the first character to lowercase.
      * Otherwise, returns the name of the member verbatim.
      * <p>
-     * Examples: ["getFoo" -> "foo"], ["isFoo" -> "foo"], ["hasFoo" -> "foo"]
+     * Examples: ["getFoo" -&gt; "foo"], ["isFoo" -&gt; "foo"], ["hasFoo" -&gt; "foo"]
      */
     public static Function<Member, String> USE_HUMAN_READABLE_NAMES_FOR_GETTERS = AttributeNameProducers::getterToHumanReadableName;
 
