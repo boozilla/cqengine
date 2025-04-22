@@ -146,6 +146,7 @@ sourceSets {
 // Make sourcesJar depend on grammar generation tasks
 tasks.named('sourcesJar') {
     dependsOn generateGrammars, generateGrammarSource
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // Configure JavaDoc
