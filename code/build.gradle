@@ -108,7 +108,6 @@ compileJava.dependsOn generateGrammars
 sourceSets {
     main {
         java {
-            srcDir "${project.buildDir}/generated-src/antlr/main"
             srcDir "${project.buildDir}/generated-src/antlr/antlr4"
         }
     }
