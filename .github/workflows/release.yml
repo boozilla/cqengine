@@ -2,12 +2,22 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 3.6.1)"
+        required: true
+        type: string
+      branch:
+        description: "Branch to bump and tag from"
+        required: true
+        default: "main"
+        type: string
   push:
     tags:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -24,7 +34,15 @@ jobs:
       SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 
     steps:
-      - name: Checkout
+      - name: Checkout (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+
+      - name: Checkout (Tag Push)
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -46,6 +64,52 @@ jobs:
           test -n "${SIGNING_PASSWORD}" || (echo "SIGNING_PASSWORD is required" && exit 1)
           echo "${SIGNING_KEY}" | base64 --decode >/dev/null 2>&1 || (echo "SIGNING_KEY must be base64-encoded" && exit 1)
 
+      - name: Resolve Release Version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          if [[ -z "${VERSION}" ]]; then
+            echo "Release version is required" >&2
+            exit 1
+          fi
+          if [[ "${VERSION}" == *"-SNAPSHOT" ]]; then
+            echo "Release version must not be SNAPSHOT: ${VERSION}" >&2
+            exit 1
+          fi
+          echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Configure Git
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump Version And Create Tag (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.value }}"
+          TAG="v${VERSION}"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag already exists on origin: ${TAG}" >&2
+            exit 1
+          fi
+
+          bash .github/scripts/bump-version.sh "${VERSION}" gradle.properties
+
+          if ! git diff --quiet -- gradle.properties; then
+            git add gradle.properties
+            git commit -m "chore(release): v${VERSION}"
+          fi
+
+          git tag -a "${TAG}" -m "Release ${TAG}"
+
       - name: Verify Build
         run: |
           ./gradlew --no-daemon \
@@ -62,4 +126,15 @@ jobs:
           ./gradlew --no-daemon \
             publishToSonatype \
             closeAndReleaseSonatypeStagingRepository \
-            -PperformRelease=true
+            -PperformRelease=true \
+            -Pversion=${{ steps.version.outputs.value }}
+
+      - name: Push Commit And Tag (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.value }}"
+          TAG="v${VERSION}"
+
+          git push origin HEAD:${{ inputs.branch }}
+          git push origin "${TAG}"
