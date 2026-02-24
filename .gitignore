@@ -1,0 +1,14 @@
+.gradle/
+.gradle-user-home/
+build/
+out/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,32 @@
+[versions]
+nexus = "2.0.0"
+antlr = "4.13.2"
+concurrentTrees = "2.6.1"
+javassist = "3.25.0-GA"
+sqliteJdbc = "3.51.2.0"
+kryo = "5.6.2"
+kryoSerializers = "0.45"
+typetools = "0.6.3"
+mockito = "2.27.0"
+junit4 = "4.13.1"
+junitDataprovider = "1.13.1"
+guavaTestlib = "27.1-jre"
+equalsVerifier = "4.4.1"
+
+[plugins]
+nexus = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus" }
+
+[libraries]
+antlr-tool = { group = "org.antlr", name = "antlr4", version.ref = "antlr" }
+antlr-runtime = { group = "org.antlr", name = "antlr4-runtime", version.ref = "antlr" }
+concurrent-trees = { group = "com.googlecode.concurrent-trees", name = "concurrent-trees", version.ref = "concurrentTrees" }
+javassist = { group = "org.javassist", name = "javassist", version.ref = "javassist" }
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqliteJdbc" }
+kryo = { group = "com.esotericsoftware", name = "kryo", version.ref = "kryo" }
+kryo-serializers = { group = "de.javakaffee", name = "kryo-serializers", version.ref = "kryoSerializers" }
+typetools = { group = "net.jodah", name = "typetools", version.ref = "typetools" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+junit-dataprovider = { group = "com.tngtech.java", name = "junit-dataprovider", version.ref = "junitDataprovider" }
+guava-testlib = { group = "com.google.guava", name = "guava-testlib", version.ref = "guavaTestlib" }
+equalsverifier = { group = "nl.jqno.equalsverifier", name = "equalsverifier", version.ref = "equalsVerifier" }

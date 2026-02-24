@@ -1,0 +1,64 @@
+def performRelease = (project.findProperty('performRelease')?.toString()?.toBoolean()) ?: false
+
+afterEvaluate {
+    publishing {
+        publications {
+            publications.named(project.name, MavenPublication) {
+                groupId = project.group.toString()
+                artifactId = project.name
+
+                from components.java
+
+                pom {
+                    name = 'CQEngine'
+                    description = 'Collection Query Engine: NoSQL indexing and query engine for Java collections with ultra-low latency'
+                    url = 'https://github.com/boozilla/cqengine'
+
+                    licenses {
+                        license {
+                            name = 'The Apache Software License, Version 2.0'
+                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                            distribution = 'repo'
+                        }
+                    }
+
+                    scm {
+                        connection = 'scm:git:https://github.com/boozilla/cqengine.git'
+                        developerConnection = 'scm:git:git@github.com:boozilla/cqengine.git'
+                        url = 'https://github.com/boozilla/cqengine'
+                        tag = 'HEAD'
+                    }
+
+                    developers {
+                        developer {
+                            id = 'boozilla'
+                            name = 'Chanhwi Kim'
+                            email = 'io.async@gmail.com'
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    def signingKey = System.getenv('SIGNING_KEY')
+    def signingPassword = System.getenv('SIGNING_PASSWORD')
+    def hasSigningCredentials = Objects.nonNull(signingKey) && Objects.nonNull(signingPassword)
+
+    signing {
+        required = performRelease && hasSigningCredentials
+
+        if (hasSigningCredentials) {
+            useInMemoryPgpKeys(new String(signingKey.decodeBase64()), signingPassword)
+            sign publishing.publications
+        }
+    }
+
+    tasks.withType(Sign).configureEach {
+        onlyIf { performRelease && hasSigningCredentials }
+    }
+
+    tasks.matching { it.name.contains('Sonatype') }.configureEach {
+        onlyIf { performRelease }
+    }
+}
