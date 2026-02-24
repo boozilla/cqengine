@@ -31,19 +31,7 @@ dependencies {
 - Gradle Wrapper(`gradle-9.3.1`) 실행에는 JDK 17 이상이 필요합니다.
 - 라이브러리 바이트코드 타겟은 Java 8(`--release 8`)을 유지합니다.
 
-## 아티팩트 계약(마이그레이션 후)
-
-- 현재 기본 산출물은 `cqengine-<version>.jar`, `-sources.jar`, `-javadoc.jar`입니다.
-- 기존 Maven 빌드의 `-all` shaded JAR 및 OSGi manifest 유지 여부는 소비자 사용처 확인 후 최종 확정합니다.
-- 현재 산출물 상태는 아래 명령으로 확인할 수 있습니다.
-
-```bash
-./gradlew artifactContractReport
-```
-
-- 리포트 파일: `build/reports/artifacts/artifact-contract-report.txt`
-
-### 최소 예제
+### 예제
 
 ```java
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
@@ -102,8 +90,8 @@ finally {
 CQEngine은 프로그램적 쿼리 API 외에도 SQL/CQN 문자열 파서를 지원합니다.
 관련 예제 코드는 아래 경로를 참고하세요.
 
-- SQL 예제: `src/test/java/com/googlecode/cqengine/examples/parser/SQLQueryDemo.java`
-- CQN 예제: `src/test/java/com/googlecode/cqengine/examples/parser/CQNQueryDemo.java`
+- SQL 예제: [SQLQueryDemo.java](src/test/java/com/googlecode/cqengine/examples/parser/SQLQueryDemo.java)
+- CQN 예제: [CQNQueryDemo.java](src/test/java/com/googlecode/cqengine/examples/parser/CQNQueryDemo.java)
 
 ## 지속성 및 트랜잭션
 
