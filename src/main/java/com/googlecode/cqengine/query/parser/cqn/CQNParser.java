@@ -16,7 +16,6 @@
 package com.googlecode.cqengine.query.parser.cqn;
 
 import com.googlecode.cqengine.attribute.Attribute;
-import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.parser.common.InvalidQueryException;
 import com.googlecode.cqengine.query.parser.common.ParseResult;
 import com.googlecode.cqengine.query.parser.common.QueryParser;
@@ -25,7 +24,7 @@ import com.googlecode.cqengine.query.parser.cqn.grammar.CQNGrammarParser;
 import com.googlecode.cqengine.query.parser.cqn.support.CQNAntlrListener;
 import com.googlecode.cqengine.query.parser.cqn.support.FallbackValueParser;
 import com.googlecode.cqengine.query.parser.cqn.support.StringParser;
-import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
@@ -35,7 +34,7 @@ import java.util.Map;
  * A parser for CQN queries - CQEngine-Native syntax.
  * <p/>
  * CQN syntax is based on how CQEngine queries look in native Java code, and the format returned by
- * {@link Query#toString()}.
+ * {@link Object#toString()} in query implementations.
  *
  * @author Niall Gallagher
  */
@@ -54,7 +53,7 @@ public class CQNParser<O> extends QueryParser<O> {
             if (query == null) {
                 throw new IllegalArgumentException("Query was null");
             }
-            CQNGrammarLexer lexer = new CQNGrammarLexer(new ANTLRInputStream(query));
+            CQNGrammarLexer lexer = new CQNGrammarLexer(CharStreams.fromString(query));
             lexer.removeErrorListeners();
             lexer.addErrorListener(SYNTAX_ERROR_LISTENER);
 

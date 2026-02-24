@@ -158,6 +158,7 @@ public class QueryFactory {
      * @param <O> The type of the object containing the attribute
      * @return An {@link In} query
      */
+    @SafeVarargs
     public static <O, A> Query<O> in(Attribute<O, A> attribute, A... attributeValues) {
         return in(attribute, Arrays.asList(attributeValues));
     }
@@ -378,6 +379,7 @@ public class QueryFactory {
      * @param <O> The type of the object containing attributes to which child queries refer
      * @return An {@link And} query, representing a logical AND on child queries
      */
+    @SafeVarargs
     public static <O> And<O> and(Query<O> query1, Query<O> query2, Query<O>... additionalQueries) {
         Collection<Query<O>> queries = new ArrayList<Query<O>>(2 + additionalQueries.length);
         queries.add(query1);
@@ -429,6 +431,7 @@ public class QueryFactory {
      * @param <O> The type of the object containing attributes to which child queries refer
      * @return An {@link Or} query, representing a logical OR on child queries
      */
+    @SafeVarargs
     public static <O> Or<O> or(Query<O> query1, Query<O> query2, Query<O>... additionalQueries) {
         Collection<Query<O>> queries = new ArrayList<Query<O>>(2 + additionalQueries.length);
         queries.add(query1);
@@ -576,6 +579,7 @@ public class QueryFactory {
      * @param <O> The type of the object containing the attributes
      * @return An {@link OrderByOption} query option, requests results to be sorted in the given order
      */
+    @SafeVarargs
     public static <O> OrderByOption<O> orderBy(AttributeOrder<O>... attributeOrders) {
         return new OrderByOption<O>(Arrays.asList(attributeOrders));
     }

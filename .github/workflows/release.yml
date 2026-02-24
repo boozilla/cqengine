@@ -118,6 +118,7 @@ jobs:
             check \
             generateGrammarSource \
             compileJava \
+            artifactContractReport \
             jacocoTestReport \
             jacocoTestCoverageVerification
 

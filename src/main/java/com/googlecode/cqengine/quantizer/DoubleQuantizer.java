@@ -71,7 +71,7 @@ public class DoubleQuantizer {
      * </ul>
      *
      * @param compressionFactor The number of adjacent mathematical integers to coalesce to a single key. <b>Supply a
-     * factor < 2 to disable compression</b> and simply truncate everything after the decimal point
+     * factor &lt; 2 to disable compression</b> and simply truncate everything after the decimal point
      * @return A {@link Quantizer} which converts the input value to the closest multiple of the compression
      * factor, in the direction towards zero
      */

@@ -1,4 +1,5 @@
 def performRelease = (project.findProperty('performRelease')?.toString()?.toBoolean()) ?: false
+def scmTag = project.version.toString().endsWith('-SNAPSHOT') ? 'HEAD' : "v${project.version}"
 
 afterEvaluate {
     publishing {
@@ -26,7 +27,7 @@ afterEvaluate {
                         connection = 'scm:git:https://github.com/boozilla/cqengine.git'
                         developerConnection = 'scm:git:git@github.com:boozilla/cqengine.git'
                         url = 'https://github.com/boozilla/cqengine'
-                        tag = 'HEAD'
+                        tag = scmTag
                     }
 
                     developers {
@@ -43,7 +44,7 @@ afterEvaluate {
 
     def signingKey = System.getenv('SIGNING_KEY')
     def signingPassword = System.getenv('SIGNING_PASSWORD')
-    def hasSigningCredentials = Objects.nonNull(signingKey) && Objects.nonNull(signingPassword)
+    def hasSigningCredentials = signingKey != null && signingPassword != null
 
     signing {
         required = performRelease && hasSigningCredentials

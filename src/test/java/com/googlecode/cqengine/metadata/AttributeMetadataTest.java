@@ -142,6 +142,7 @@ public class AttributeMetadataTest {
         return collection;
     }
 
+    @SafeVarargs
     static <T> Set<T> asSet(T... elements) {
         return new LinkedHashSet<>(asList(elements));
     }

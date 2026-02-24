@@ -7,8 +7,11 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.api.tasks.testing.Test
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
+import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import java.time.Instant
+import java.util.jar.JarFile
 
 plugins {
     `java-library`
@@ -39,6 +42,9 @@ nexusPublishing {
 }
 
 java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
     withSourcesJar()
@@ -48,6 +54,12 @@ java {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release.set(8)
+    options.compilerArgs.addAll(
+        listOf(
+            "-Xlint:deprecation",
+            "-Xlint:unchecked"
+        )
+    )
 }
 
 tasks.withType<Javadoc>().configureEach {
@@ -142,6 +154,77 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
 tasks.named("check") {
     dependsOn(tasks.named("jacocoTestReport"))
     dependsOn(tasks.named("jacocoTestCoverageVerification"))
+}
+
+tasks.register("artifactContractReport") {
+    group = "verification"
+    description = "Reports publication artifacts and manifest metadata for migration compatibility checks."
+    dependsOn(tasks.named("assemble"))
+
+    doLast {
+        val libsDir = layout.buildDirectory.dir("libs").get().asFile
+        val reportDir = layout.buildDirectory.dir("reports/artifacts").get().asFile
+        reportDir.mkdirs()
+
+        val jars = libsDir
+            .listFiles { file -> file.isFile && file.extension == "jar" }
+            ?.sortedBy { it.name }
+            .orEmpty()
+
+        val mainJar = jars.firstOrNull { jar ->
+            jar.name == "${project.name}-${project.version}.jar"
+        } ?: jars.firstOrNull { jar ->
+            jar.name.endsWith(".jar") &&
+                !jar.name.endsWith("-sources.jar") &&
+                !jar.name.endsWith("-javadoc.jar")
+        }
+
+        val osgiHeaders = mutableMapOf(
+            "Bundle-SymbolicName" to "(absent)",
+            "Bundle-Version" to "(absent)",
+            "Export-Package" to "(absent)",
+            "Import-Package" to "(absent)"
+        )
+        if (mainJar != null) {
+            JarFile(mainJar).use { jarFile ->
+                val manifest = jarFile.manifest?.mainAttributes
+                osgiHeaders.keys.forEach { key ->
+                    val value = manifest?.getValue(key)
+                    if (value != null) {
+                        osgiHeaders[key] = value
+                    }
+                }
+            }
+        }
+
+        val hasLegacyShadedJar = jars.any { jar ->
+            jar.name.contains("-all") || jar.name.contains("-shadow")
+        }
+
+        val lines = buildList {
+            add("Artifact Contract Report")
+            add("GeneratedAt: ${Instant.now()}")
+            add("Project: ${project.group}:${project.name}:${project.version}")
+            add("")
+            add("JAR files:")
+            if (jars.isEmpty()) {
+                add("- (none)")
+            } else {
+                jars.forEach { jar -> add("- ${jar.name}") }
+            }
+            add("")
+            add("LegacyShadedJarPresent: $hasLegacyShadedJar")
+            add("MainJar: ${mainJar?.name ?: "(not found)"}")
+            add("OSGiHeaders:")
+            osgiHeaders.forEach { (key, value) ->
+                add("- $key: $value")
+            }
+        }
+
+        val reportFile = reportDir.resolve("artifact-contract-report.txt")
+        reportFile.writeText(lines.joinToString(System.lineSeparator()) + System.lineSeparator())
+        println("Wrote artifact contract report: ${reportFile.relativeTo(project.projectDir)}")
+    }
 }
 
 publishing {

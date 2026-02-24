@@ -1,5 +1,8 @@
 # CQEngine - Collection Query Engine
 
+[![License](https://img.shields.io/github/license/boozilla/cqengine)](https://github.com/boozilla/cqengine/blob/master/LICENSE.txt)
+[![Release](https://img.shields.io/github/v/release/boozilla/cqengine?sort=semver)](https://github.com/boozilla/cqengine/releases)
+
 CQEngine은 Java 컬렉션을 SQL 유사 방식으로 질의할 수 있게 해주는 인메모리 쿼리 엔진입니다.
 `IndexedCollection`에 인덱스를 구성해 반복(iteration) 기반 조회의 비용을 크게 줄이고, 낮은 지연 시간으로 조회할 수 있도록 설계되었습니다.
 
@@ -13,17 +16,32 @@ CQEngine은 Java 컬렉션을 SQL 유사 방식으로 질의할 수 있게 해�
 
 ## 빠른 시작
 
-### Maven
+### Gradle
 
-```xml
-<dependency>
-    <groupId>com.googlecode.cqengine</groupId>
-    <artifactId>cqengine</artifactId>
-    <version>x.x.x</version>
-</dependency>
+```kotlin
+dependencies {
+    implementation("io.github.boozilla:cqengine:3.6.1")
+}
 ```
 
 최신 버전은 [릴리스 노트](https://github.com/boozilla/cqengine/wiki/ReleaseNotes)에서 확인하세요.
+
+## 빌드 요구사항
+
+- Gradle Wrapper(`gradle-9.3.1`) 실행에는 JDK 17 이상이 필요합니다.
+- 라이브러리 바이트코드 타겟은 Java 8(`--release 8`)을 유지합니다.
+
+## 아티팩트 계약(마이그레이션 후)
+
+- 현재 기본 산출물은 `cqengine-<version>.jar`, `-sources.jar`, `-javadoc.jar`입니다.
+- 기존 Maven 빌드의 `-all` shaded JAR 및 OSGi manifest 유지 여부는 소비자 사용처 확인 후 최종 확정합니다.
+- 현재 산출물 상태는 아래 명령으로 확인할 수 있습니다.
+
+```bash
+./gradlew artifactContractReport
+```
+
+- 리포트 파일: `build/reports/artifacts/artifact-contract-report.txt`
 
 ### 최소 예제
 

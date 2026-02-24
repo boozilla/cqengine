@@ -176,6 +176,7 @@ public class JoinTest {
     }
 
 
+    @SafeVarargs
     static <T> Set<T> asSet(T... objects) {
         return asSet(asList(objects));
     }

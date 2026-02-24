@@ -35,7 +35,7 @@ import static com.googlecode.cqengine.testutil.TestUtil.setOf;
 import static com.googlecode.cqengine.testutil.TestUtil.valuesOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Validates general functionality - indexes, query engine, ordering results.

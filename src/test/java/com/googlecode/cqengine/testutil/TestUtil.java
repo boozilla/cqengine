@@ -51,6 +51,7 @@ public class TestUtil {
      * Returns a set of the given vararg values. The set preserves the order of values given, but eliminates duplicates.
      */
     @SuppressWarnings({"JavaDoc"})
+    @SafeVarargs
     public static <A> Set<A> setOf(A... values) {
         return new LinkedHashSet<A>(Arrays.asList(values));
     }

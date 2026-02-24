@@ -287,6 +287,7 @@ public class TransactionalIndexedCollectionTest extends TestCase {
             }
         };
     }
+    @SafeVarargs
     static <O> Set<O> asSet(O... objects) {
         return new LinkedHashSet<O>(asList(objects));
     }
