@@ -1,6 +1,6 @@
 # CQEngine - Collection Query Engine
 
-[![License](https://img.shields.io/github/license/boozilla/cqengine)](https://github.com/boozilla/cqengine/blob/master/LICENSE.txt)
+[![License](https://img.shields.io/github/license/boozilla/cqengine)](https://github.com/boozilla/cqengine/blob/main/LICENSE.txt)
 [![Release](https://img.shields.io/github/v/release/boozilla/cqengine?sort=semver)](https://github.com/boozilla/cqengine/releases)
 
 CQEngine은 Java 컬렉션을 SQL 유사 방식으로 질의할 수 있게 해주는 인메모리 쿼리 엔진입니다.
