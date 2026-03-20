@@ -289,6 +289,9 @@ public class OffHeapPersistence<O, A extends Comparable<A>> implements SQLitePer
     /**
      * Creates an {@link OffHeapPersistence} object which persists to native memory, within the JVM process but outside
      * the Java heap.
+     * <p/>
+     * When a primary key is configured, CQEngine treats it as the canonical object identity for persistence
+     * operations, and retrievals without an explicit {@code orderBy} default to primary-key ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @return An {@link OffHeapPersistence} object which persists to native memory
@@ -300,6 +303,9 @@ public class OffHeapPersistence<O, A extends Comparable<A>> implements SQLitePer
     /**
      * Creates an {@link OffHeapPersistence} object which persists to native memory, within the JVM process but outside
      * the Java heap.
+     * <p/>
+     * When a primary key is configured, CQEngine treats it as the canonical object identity for persistence
+     * operations, and retrievals without an explicit {@code orderBy} default to primary-key ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @param overrideProperties Optional properties to override default settings (can be empty to use all default

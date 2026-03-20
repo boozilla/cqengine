@@ -19,6 +19,7 @@ import com.googlecode.cqengine.index.support.CloseableIterator;
 import com.googlecode.cqengine.index.support.CloseableRequestResources;
 import com.googlecode.cqengine.persistence.Persistence;
 import com.googlecode.cqengine.persistence.onheap.OnHeapPersistence;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedObjectStore;
 import com.googlecode.cqengine.query.option.QueryOptions;
 
 import java.util.Collection;
@@ -159,7 +160,7 @@ public class ObjectLockingIndexedCollection<O> extends ConcurrentIndexedCollecti
                 if (currentObject == null) {
                     throw new IllegalStateException();
                 }
-                Lock lock = stripedLock.getLockForObject(currentObject);
+                Lock lock = stripedLock.getLockForObject(getLockIdentity(currentObject));
                 lock.lock();
                 try {
                     // Handle an edge case where we might have retrieved the last object and called close() automatically,
@@ -191,7 +192,7 @@ public class ObjectLockingIndexedCollection<O> extends ConcurrentIndexedCollecti
      */
     @Override
     public boolean add(O o) {
-        Lock lock = stripedLock.getLockForObject(o);
+        Lock lock = stripedLock.getLockForObject(getLockIdentity(o));
         lock.lock();
         try {
             return super.add(o);
@@ -206,7 +207,7 @@ public class ObjectLockingIndexedCollection<O> extends ConcurrentIndexedCollecti
      */
     @Override
     public boolean remove(Object object) {
-        Lock lock = stripedLock.getLockForObject(object);
+        Lock lock = stripedLock.getLockForObject(getLockIdentity(object));
         lock.lock();
         try {
             return super.remove(object);
@@ -254,5 +255,14 @@ public class ObjectLockingIndexedCollection<O> extends ConcurrentIndexedCollecti
     @Override
     public synchronized void clear() {
         super.clear();
+    }
+
+    Object getLockIdentity(Object object) {
+        PrimaryKeyedObjectStore<O> primaryKeyedObjectStore = getPrimaryKeyedObjectStoreOrNull();
+        if (primaryKeyedObjectStore == null) {
+            return object;
+        }
+        Object primaryKey = primaryKeyedObjectStore.getPrimaryKeyForObject(object, new QueryOptions());
+        return primaryKey != null ? primaryKey : object;
     }
 }

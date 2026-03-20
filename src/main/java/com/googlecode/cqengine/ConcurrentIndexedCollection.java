@@ -27,6 +27,7 @@ import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.persistence.support.ObjectStoreAsSet;
 import com.googlecode.cqengine.persistence.support.PersistenceFlags;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedObjectStore;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.FlagsEnabled;
 import com.googlecode.cqengine.query.option.QueryOptions;
@@ -367,11 +368,7 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
     public boolean add(O o) {
         QueryOptions queryOptions = openRequestScopeResourcesIfNecessary(null);
         try {
-            // Add the object to the index.
-            // Indexes handle gracefully the case that the objects supplied already exist in the index...
-            boolean modified = objectStore.add(o, queryOptions);
-            indexEngine.addAll(ObjectSet.fromCollection(singleton(o)), queryOptions);
-            return modified;
+            return doAddAll(singleton(o), queryOptions);
         }
         finally {
             closeRequestScopeResourcesIfNecessary(queryOptions);
@@ -387,9 +384,7 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
         try {
             @SuppressWarnings({"unchecked"})
             O o = (O) object;
-            boolean modified = objectStore.remove(o, queryOptions);
-            indexEngine.removeAll(ObjectSet.fromCollection(singleton(o)), queryOptions);
-            return modified;
+            return doRemoveAll(singleton(o), queryOptions);
         }
         finally {
             closeRequestScopeResourcesIfNecessary(queryOptions);
@@ -405,9 +400,7 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
         try {
             @SuppressWarnings({"unchecked"})
             Collection<O> objects = (Collection<O>) c;
-            boolean modified = objectStore.addAll(objects, queryOptions);
-            indexEngine.addAll(ObjectSet.fromCollection(objects), queryOptions);
-            return modified;
+            return doAddAll(objects, queryOptions);
         }
         finally {
             closeRequestScopeResourcesIfNecessary(queryOptions);
@@ -423,9 +416,7 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
         try {
             @SuppressWarnings({"unchecked"})
             Collection<O> objects = (Collection<O>) c;
-            boolean modified = objectStore.removeAll(objects, queryOptions);
-            indexEngine.removeAll(ObjectSet.fromCollection(objects), queryOptions);
-            return modified;
+            return doRemoveAll(objects, queryOptions);
         }
         finally {
             closeRequestScopeResourcesIfNecessary(queryOptions);
@@ -473,6 +464,19 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
     }
 
     boolean doAddAll(Iterable<O> objects, QueryOptions queryOptions) {
+        PrimaryKeyedObjectStore<O> primaryKeyedObjectStore = getPrimaryKeyedObjectStoreOrNull();
+        if (primaryKeyedObjectStore != null) {
+            boolean modified = false;
+            for (O object : objects) {
+                PrimaryKeyedObjectStore.ModificationResult<O> result = primaryKeyedObjectStore.addOrReplace(object, queryOptions);
+                if (!result.isModified()) {
+                    continue;
+                }
+                synchronizePrimaryKeyedAddition(result, queryOptions);
+                modified = true;
+            }
+            return modified;
+        }
         if (objects instanceof Collection) {
             Collection<O> c = (Collection<O>) objects;
             boolean modified = objectStore.addAll(c, queryOptions);
@@ -491,6 +495,19 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
     }
 
     boolean doRemoveAll(Iterable<O> objects, QueryOptions queryOptions) {
+        PrimaryKeyedObjectStore<O> primaryKeyedObjectStore = getPrimaryKeyedObjectStoreOrNull();
+        if (primaryKeyedObjectStore != null) {
+            boolean modified = false;
+            for (O object : objects) {
+                PrimaryKeyedObjectStore.ModificationResult<O> result = primaryKeyedObjectStore.removeByPrimaryKey(object, queryOptions);
+                if (!result.isModified()) {
+                    continue;
+                }
+                synchronizePrimaryKeyedRemoval(result, queryOptions);
+                modified = true;
+            }
+            return modified;
+        }
         if (objects instanceof Collection) {
             Collection<O> c = (Collection<O>) objects;
             boolean modified = objectStore.removeAll(c, queryOptions);
@@ -504,6 +521,33 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
                 modified = removed || modified;
             }
             return modified;
+        }
+    }
+
+    protected PrimaryKeyedObjectStore<O> getPrimaryKeyedObjectStoreOrNull() {
+        if (objectStore instanceof PrimaryKeyedObjectStore) {
+            @SuppressWarnings("unchecked")
+            PrimaryKeyedObjectStore<O> primaryKeyedObjectStore = (PrimaryKeyedObjectStore<O>) objectStore;
+            return primaryKeyedObjectStore;
+        }
+        return null;
+    }
+
+    void synchronizePrimaryKeyedAddition(PrimaryKeyedObjectStore.ModificationResult<O> result, QueryOptions queryOptions) {
+        O previousObject = result.getPreviousObject();
+        if (previousObject != null) {
+            indexEngine.removeAll(ObjectSet.fromCollection(singleton(previousObject)), queryOptions);
+        }
+        O currentObject = result.getCurrentObject();
+        if (currentObject != null) {
+            indexEngine.addAll(ObjectSet.fromCollection(singleton(currentObject)), queryOptions);
+        }
+    }
+
+    void synchronizePrimaryKeyedRemoval(PrimaryKeyedObjectStore.ModificationResult<O> result, QueryOptions queryOptions) {
+        O previousObject = result.getPreviousObject();
+        if (previousObject != null) {
+            indexEngine.removeAll(ObjectSet.fromCollection(singleton(previousObject)), queryOptions);
         }
     }
 

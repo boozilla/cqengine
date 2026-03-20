@@ -21,6 +21,7 @@ import com.googlecode.cqengine.index.support.indextype.OnHeapTypeIndex;
 import com.googlecode.cqengine.persistence.Persistence;
 import com.googlecode.cqengine.persistence.support.ConcurrentOnHeapObjectStore;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedOnHeapObjectStore;
 import com.googlecode.cqengine.query.option.QueryOptions;
 
 /**
@@ -60,6 +61,9 @@ public class OnHeapPersistence<O, A extends Comparable<A>> implements Persistenc
 
     @Override
     public ObjectStore<O> createObjectStore() {
+        if (primaryKeyAttribute != null) {
+            return new PrimaryKeyedOnHeapObjectStore<O, A>(primaryKeyAttribute);
+        }
         return new ConcurrentOnHeapObjectStore<O>(initialCapacity, loadFactor, concurrencyLevel);
     }
 
@@ -85,7 +89,12 @@ public class OnHeapPersistence<O, A extends Comparable<A>> implements Persistenc
     }
 
     /**
-     * Creates an {@link OnHeapPersistence} object which persists to the Java heap.
+     * Creates an {@link OnHeapPersistence} object which persists to the Java heap and is configured with a primary
+     * key.
+     * <p/>
+     * When a primary key is configured, objects are stored and iterated in primary-key ascending order, updates are
+     * synchronized by primary key, and retrievals without an explicit {@code orderBy} default to primary-key
+     * ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @return An {@link OnHeapPersistence} object which persists to the Java heap.
@@ -101,6 +110,8 @@ public class OnHeapPersistence<O, A extends Comparable<A>> implements Persistenc
      * This persistence will not work with composite persistence configurations, where some indexes are located on heap,
      * and some off-heap etc. To use this persistence in those configurations, it is necessary to specify a primary
      * key - see: {@link #onPrimaryKey(SimpleAttribute)}.
+     * <p/>
+     * Because no primary key is configured, CQEngine does not guarantee any default iteration or retrieval order.
      *
      * @return An {@link OnHeapPersistence} object which persists to the Java heap, and which is not configured with
      * a primary key.

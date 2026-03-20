@@ -346,6 +346,9 @@ public class DiskPersistence<O, A extends Comparable<A>> implements SQLitePersis
     /**
      * Creates a {@link DiskPersistence} object which persists to a temp file on disk. The exact temp file used can
      * be determined by calling the {@link #getFile()} method.
+     * <p/>
+     * When a primary key is configured, CQEngine treats it as the canonical object identity for persistence
+     * operations, and retrievals without an explicit {@code orderBy} default to primary-key ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @return A {@link DiskPersistence} object which persists to a temp file on disk
@@ -357,6 +360,9 @@ public class DiskPersistence<O, A extends Comparable<A>> implements SQLitePersis
 
     /**
      * Creates a {@link DiskPersistence} object which persists to a given file on disk.
+     * <p/>
+     * When a primary key is configured, CQEngine treats it as the canonical object identity for persistence
+     * operations, and retrievals without an explicit {@code orderBy} default to primary-key ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @param file The file on disk to which data should be persisted
@@ -368,6 +374,9 @@ public class DiskPersistence<O, A extends Comparable<A>> implements SQLitePersis
 
     /**
      * Creates a {@link DiskPersistence} object which persists to a given file on disk.
+     * <p/>
+     * When a primary key is configured, CQEngine treats it as the canonical object identity for persistence
+     * operations, and retrievals without an explicit {@code orderBy} default to primary-key ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @param file The file on disk to which data should be persisted

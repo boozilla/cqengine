@@ -18,6 +18,7 @@ package com.googlecode.cqengine;
 import com.googlecode.cqengine.persistence.Persistence;
 import com.googlecode.cqengine.persistence.onheap.OnHeapPersistence;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedObjectStore;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.ArgumentValidationOption;
 import com.googlecode.cqengine.query.option.FlagsEnabled;
@@ -47,46 +48,17 @@ import static com.googlecode.cqengine.query.option.IsolationOption.isIsolationLe
  * <i>atomic replacement</i> of objects in the collection.
  * <p/>
  * <b>Atomically replacing objects</b><br/>
- * A restriction is that if you want to replace objects in the collection, then for each object to be removed,
- * {@code objectToRemove.equals(objectToAdd)} should return {@code false}. That is, the sets of objects to be removed
- * and added must be <i>disjoint</i>. You can achieve that by adding a hidden version field in your object as follows:
- * <pre>
- * <code>
- *
- * public class Car {
- *
- *     static final AtomicLong VERSION_GENERATOR = new AtomicLong();
- *
- *     final int carId;
- *     final String name;
- *     final long version = VERSION_GENERATOR.incrementAndGet();
- *
- *     public Car(int carId, String name) {
- *         this.carId = carId;
- *         this.name = name;
- *     }
- *
- *     {@literal @Override}
- *     public int hashCode() {
- *         return carId;
- *     }
- *
- *     {@literal @Override}
- *     public boolean equals(Object o) {
- *         if (this == o) return true;
- *         if (o == null || getClass() != o.getClass()) return false;
- *         Car other = (Car) o;
- *         if (this.carId != other.carId) return false;
- *         if (this.version != other.version) return false;
- *         return true;
- *     }
- * }
- * </code>
- * </pre>
+ * If the collection is not configured with a primary-keyed persistence, replacement objects must still be
+ * <i>disjoint</i> according to {@link Object#equals(Object)}.
+ * <p/>
+ * If the collection <i>is</i> configured with a primary-keyed persistence, replacement is validated by primary key
+ * instead. In that case the same primary key may appear in both the remove and add sets to model replacement, but
+ * each individual set must not contain conflicting objects with the same primary key.
  * <b>Argument validation</b><br/>
- * By default this class will <b>validate</b> that objects to be replaced adhere to the requirement above, which adds
- * some overhead to query processing. Therefore once applications are confirmed as being compliant, this validation
- * can be switched off by supplying a QueryOption. See the JavaDoc on the {@code update()} method for details.
+ * By default this class will <b>validate</b> that objects to be replaced adhere to the applicable requirements above,
+ * which adds some overhead to query processing. Therefore once applications are confirmed as being compliant, this
+ * validation can be switched off by supplying a QueryOption. See the JavaDoc on the {@code update()} method for
+ * details.
  * @see #update(Iterable, Iterable, com.googlecode.cqengine.query.option.QueryOptions)
  *
  * @author Niall Gallagher
@@ -199,9 +171,13 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
      * atomically.
      * <p/>
      * <b>Atomically replacing objects and argument validation</b><br/>
-     * As discussed in this class' JavaDoc, the sets of objects to be removed and objects to be added supplied to this
-     * method as arguments, must be <i>disjoint</i> and <i>this method will validate that this is the case by
-     * default</i>.
+     * As discussed in this class' JavaDoc, this method validates replacement arguments by default.
+     * <p/>
+     * For collections without primary-keyed persistence, the remove and add sets must be <i>disjoint</i> according
+     * to {@link Object#equals(Object)}.
+     * <p/>
+     * For collections with primary-keyed persistence, the same primary key may appear in both remove and add sets to
+     * model replacement, but conflicting duplicates within either set are rejected.
      * <p/>
      * To disable this validation for performance reasons, supply QueryOption: <code>argumentValidation(SKIP)</code>.
      * <p/>
@@ -225,48 +201,41 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
             // Write directly to the collection with no MVCC overhead...
             return super.update(objectsToRemove, objectsToAdd, queryOptions);
         }
-        // By default, validate that the sets of objectsToRemove and objectsToAdd are disjoint...
-        if (!ArgumentValidationOption.isSkip(queryOptions)) {
-            ensureUpdateSetsAreDisjoint(objectsToRemove, objectsToAdd);
-        }
+
+        final List<O> objectsToRemoveList = materializeIterable(objectsToRemove);
+        final List<O> objectsToAddList = materializeIterable(objectsToAdd);
 
         // Otherwise apply MVCC to support READ_COMMITTED isolation...
         synchronized (writeMutex) {
             queryOptions = openRequestScopeResourcesIfNecessary(queryOptions);
             try {
-                Iterator<O> objectsToRemoveIterator = objectsToRemove.iterator();
-                Iterator<O> objectsToAddIterator = objectsToAdd.iterator();
-                if (!objectsToRemoveIterator.hasNext() && !objectsToAddIterator.hasNext()) {
+                List<O> normalizedObjectsToRemove = objectsToRemoveList;
+                List<O> normalizedObjectsToAdd = objectsToAddList;
+                if (normalizedObjectsToRemove.isEmpty() && normalizedObjectsToAdd.isEmpty()) {
                     return false;
                 }
+                final PrimaryKeyedObjectStore<O> primaryKeyedObjectStore = getPrimaryKeyedObjectStoreOrNull();
+                if (primaryKeyedObjectStore == null) {
+                    if (!ArgumentValidationOption.isSkip(queryOptions)) {
+                        ensureUpdateSetsAreDisjoint(normalizedObjectsToRemove, normalizedObjectsToAdd);
+                    }
+                }
+                else {
+                    if (!ArgumentValidationOption.isSkip(queryOptions)) {
+                        ensureUpdateSetsHaveCompatiblePrimaryKeys(primaryKeyedObjectStore, normalizedObjectsToRemove, normalizedObjectsToAdd, queryOptions);
+                    }
+                    normalizedObjectsToRemove = normalizeObjectsToRemove(primaryKeyedObjectStore, normalizedObjectsToRemove, queryOptions);
+                    normalizedObjectsToAdd = normalizeObjectsToAdd(primaryKeyedObjectStore, normalizedObjectsToAdd, queryOptions);
+                }
                 if (FlagsEnabled.isFlagEnabled(queryOptions, STRICT_REPLACEMENT)) {
-                    if (!objectStoreContainsAllIterable(objectStore, objectsToRemove, queryOptions)) {
+                    if (!objectStoreContainsAllIterable(objectStore, normalizedObjectsToRemove, queryOptions)) {
                         return false;
                     }
                 }
-                boolean modified = false;
-                if (objectsToAddIterator.hasNext()) {
-                    // Configure new reading threads to exclude the objects we will add,
-                    // and then wait for threads reading previous versions to finish...
-                    incrementVersion(objectsToAdd);
-
-                    // Now add the given objects...
-                    modified = doAddAll(objectsToAdd, queryOptions);
+                if (primaryKeyedObjectStore != null) {
+                    return updatePrimaryKeyedStore(primaryKeyedObjectStore, normalizedObjectsToRemove, normalizedObjectsToAdd, queryOptions);
                 }
-                if (objectsToRemoveIterator.hasNext()) {
-                    // Configure (or reconfigure) new reading threads to (instead) exclude the objects we will remove,
-                    // and then wait for threads reading previous versions to finish...
-                    incrementVersion(objectsToRemove);
-
-                    // Now remove the given objects...
-                    modified = doRemoveAll(objectsToRemove, queryOptions) || modified;
-                }
-
-                // Finally, remove the exclusion,
-                // and then wait for this to take effect across all threads...
-                incrementVersion(Collections.<O>emptySet());
-
-                return modified;
+                return updateNonPrimaryKeyedStore(normalizedObjectsToRemove, normalizedObjectsToAdd, queryOptions);
             }
             finally {
                 closeRequestScopeResourcesIfNecessary(queryOptions);
@@ -436,5 +405,164 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
                 throw new IllegalArgumentException("The sets of objectsToRemove and objectsToAdd are not disjoint [for all objectsToRemove, objectToRemove.equals(objectToAdd) must return false].");
             }
         }
+    }
+
+    boolean updateNonPrimaryKeyedStore(Collection<O> objectsToRemove, Collection<O> objectsToAdd, QueryOptions queryOptions) {
+        return updateWithMvcc(objectsToRemove, objectsToRemove, objectsToAdd, queryOptions);
+    }
+
+    boolean updatePrimaryKeyedStore(PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Collection<O> objectsToRemove, Collection<O> objectsToAdd, QueryOptions queryOptions) {
+        final List<O> existingObjectsToRemove = resolveExistingObjectsToRemove(primaryKeyedObjectStore, objectsToRemove, queryOptions);
+        if (containsPrimaryKeyReplacement(primaryKeyedObjectStore, existingObjectsToRemove, objectsToAdd, queryOptions)) {
+            return updateWithPrimaryKeyBarrier(objectsToRemove, objectsToAdd, queryOptions);
+        }
+        return updateWithMvcc(existingObjectsToRemove, objectsToRemove, objectsToAdd, queryOptions);
+    }
+
+    boolean updateWithMvcc(Collection<O> objectsToExcludeOnRemove, Collection<O> objectsToRemove, Collection<O> objectsToAdd, QueryOptions queryOptions) {
+        boolean modified = false;
+        if (!objectsToAdd.isEmpty()) {
+            // Configure new reading threads to exclude the objects we will add,
+            // and then wait for threads reading previous versions to finish...
+            incrementVersion(objectsToAdd);
+
+            // Now add the given objects...
+            modified = doAddAll(objectsToAdd, queryOptions);
+        }
+        if (!objectsToRemove.isEmpty()) {
+            // Configure (or reconfigure) new reading threads to (instead) exclude the objects we will remove,
+            // and then wait for threads reading previous versions to finish...
+            incrementVersion(objectsToExcludeOnRemove);
+
+            // Now remove the given objects...
+            modified = doRemoveAll(objectsToRemove, queryOptions) || modified;
+        }
+
+        // Finally, remove the exclusion,
+        // and then wait for this to take effect across all threads...
+        incrementVersion(Collections.<O>emptySet());
+
+        return modified;
+    }
+
+    boolean updateWithPrimaryKeyBarrier(Collection<O> objectsToRemove, Collection<O> objectsToAdd, QueryOptions queryOptions) {
+        final Version barrierVersion = incrementVersionWithWriteBarrier();
+        try {
+            boolean modified = false;
+            if (!objectsToRemove.isEmpty()) {
+                modified = doRemoveAll(objectsToRemove, queryOptions);
+            }
+            if (!objectsToAdd.isEmpty()) {
+                modified = doAddAll(objectsToAdd, queryOptions) || modified;
+            }
+            return modified;
+        }
+        finally {
+            barrierVersion.lock.writeLock().unlock();
+        }
+    }
+
+    Version incrementVersionWithWriteBarrier() {
+        final Version previousVersion = this.currentVersion;
+        final Version barrierVersion = new Version(Collections.<O>emptySet());
+        barrierVersion.lock.writeLock().lock();
+        this.currentVersion = barrierVersion;
+        previousVersion.lock.writeLock().lock();
+        return barrierVersion;
+    }
+
+    List<O> resolveExistingObjectsToRemove(PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Iterable<O> objectsToRemove, QueryOptions queryOptions) {
+        final List<O> existingObjectsToRemove = new ArrayList<O>();
+        for (O objectToRemove : objectsToRemove) {
+            final O existingObject = primaryKeyedObjectStore.getObjectByPrimaryKey(objectToRemove, queryOptions);
+            if (existingObject != null) {
+                existingObjectsToRemove.add(existingObject);
+            }
+        }
+        return existingObjectsToRemove;
+    }
+
+    boolean containsPrimaryKeyReplacement(PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Collection<O> existingObjectsToRemove, Collection<O> objectsToAdd, QueryOptions queryOptions) {
+        final Set<Object> primaryKeysToRemove = new HashSet<Object>(existingObjectsToRemove.size());
+        for (O existingObjectToRemove : existingObjectsToRemove) {
+            primaryKeysToRemove.add(primaryKeyedObjectStore.getPrimaryKeyForObject(existingObjectToRemove, queryOptions));
+        }
+        for (O objectToAdd : objectsToAdd) {
+            final Object primaryKeyToAdd = primaryKeyedObjectStore.getPrimaryKeyForObject(objectToAdd, queryOptions);
+            if (primaryKeysToRemove.contains(primaryKeyToAdd)) {
+                return true;
+            }
+            if (primaryKeyedObjectStore.getObjectByPrimaryKey(objectToAdd, queryOptions) != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void ensureUpdateSetsHaveCompatiblePrimaryKeys(PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Iterable<O> objectsToRemove, Iterable<O> objectsToAdd, QueryOptions queryOptions) {
+        ensureObjectsHaveCompatiblePrimaryKeys("objectsToRemove", primaryKeyedObjectStore, objectsToRemove, queryOptions);
+        ensureObjectsHaveCompatiblePrimaryKeys("objectsToAdd", primaryKeyedObjectStore, objectsToAdd, queryOptions);
+    }
+
+    void ensureObjectsHaveCompatiblePrimaryKeys(String objectSetName, PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Iterable<O> objects, QueryOptions queryOptions) {
+        final Map<Object, O> objectsByPrimaryKey = new HashMap<Object, O>();
+        for (O object : objects) {
+            final Object primaryKey = primaryKeyedObjectStore.getPrimaryKeyForObject(object, queryOptions);
+            if (primaryKey == null) {
+                continue;
+            }
+            final O existingObject = objectsByPrimaryKey.get(primaryKey);
+            if (existingObject != null && !existingObject.equals(object)) {
+                throw new IllegalArgumentException("The " + objectSetName + " contains conflicting objects with the same primary key: " + primaryKey + ".");
+            }
+            objectsByPrimaryKey.put(primaryKey, object);
+        }
+    }
+
+    static <O> List<O> materializeIterable(Iterable<O> objects) {
+        if (objects instanceof List) {
+            return (List<O>) objects;
+        }
+        final List<O> materializedObjects = new ArrayList<O>();
+        for (O object : objects) {
+            materializedObjects.add(object);
+        }
+        return materializedObjects;
+    }
+
+    List<O> normalizeObjectsToRemove(PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Iterable<O> objectsToRemove, QueryOptions queryOptions) {
+        final Map<Object, O> objectsByPrimaryKey = new LinkedHashMap<Object, O>();
+        final List<O> objectsWithoutPrimaryKey = new ArrayList<O>();
+        for (O objectToRemove : objectsToRemove) {
+            final Object primaryKey = primaryKeyedObjectStore.getPrimaryKeyForObject(objectToRemove, queryOptions);
+            if (primaryKey == null) {
+                objectsWithoutPrimaryKey.add(objectToRemove);
+            }
+            else if (!objectsByPrimaryKey.containsKey(primaryKey)) {
+                objectsByPrimaryKey.put(primaryKey, objectToRemove);
+            }
+        }
+        final List<O> normalizedObjectsToRemove = new ArrayList<O>(objectsByPrimaryKey.size() + objectsWithoutPrimaryKey.size());
+        normalizedObjectsToRemove.addAll(objectsByPrimaryKey.values());
+        normalizedObjectsToRemove.addAll(objectsWithoutPrimaryKey);
+        return normalizedObjectsToRemove;
+    }
+
+    List<O> normalizeObjectsToAdd(PrimaryKeyedObjectStore<O> primaryKeyedObjectStore, Iterable<O> objectsToAdd, QueryOptions queryOptions) {
+        final Map<Object, O> objectsByPrimaryKey = new LinkedHashMap<Object, O>();
+        final List<O> objectsWithoutPrimaryKey = new ArrayList<O>();
+        for (O objectToAdd : objectsToAdd) {
+            final Object primaryKey = primaryKeyedObjectStore.getPrimaryKeyForObject(objectToAdd, queryOptions);
+            if (primaryKey == null) {
+                objectsWithoutPrimaryKey.add(objectToAdd);
+            }
+            else {
+                objectsByPrimaryKey.put(primaryKey, objectToAdd);
+            }
+        }
+        final List<O> normalizedObjectsToAdd = new ArrayList<O>(objectsByPrimaryKey.size() + objectsWithoutPrimaryKey.size());
+        normalizedObjectsToAdd.addAll(objectsByPrimaryKey.values());
+        normalizedObjectsToAdd.addAll(objectsWithoutPrimaryKey);
+        return normalizedObjectsToAdd;
     }
 }

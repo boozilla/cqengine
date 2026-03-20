@@ -71,8 +71,10 @@ public interface Persistence<O, A extends Comparable<A>> {
     void closeRequestScopeResources(QueryOptions queryOptions);
 
     /**
-     * @return the primary key attribute, if configured. This may be null for some persistence implementations
-     * especially on-heap persistence.
+     * @return the primary key attribute, if configured. When non-null, CQEngine treats it as the canonical object
+     * identity for persistence operations and as the default ascending order for collection iteration and top-level
+     * retrievals which do not specify an explicit ordering. This may be null for some persistence implementations,
+     * especially those configured without a primary key.
      */
     SimpleAttribute<O, A> getPrimaryKeyAttribute();
 }

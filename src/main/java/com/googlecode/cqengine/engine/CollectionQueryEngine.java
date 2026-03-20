@@ -61,6 +61,7 @@ import com.googlecode.cqengine.resultset.iterator.ConcatenatingIterator;
 import com.googlecode.cqengine.resultset.iterator.IteratorUtil;
 import com.googlecode.cqengine.resultset.iterator.UnmodifiableIterator;
 import com.googlecode.cqengine.resultset.order.AttributeOrdersComparator;
+import com.googlecode.cqengine.resultset.order.CostPreservingMaterializedOrderedResultSet;
 import com.googlecode.cqengine.resultset.order.MaterializedDeduplicatedResultSet;
 import com.googlecode.cqengine.resultset.order.MaterializedOrderedResultSet;
 
@@ -470,7 +471,9 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
     @Override
     public ResultSet<O> retrieve(final Query<O> query, final QueryOptions queryOptions) {
         @SuppressWarnings("unchecked")
-        OrderByOption<O> orderByOption = (OrderByOption<O>) queryOptions.get(OrderByOption.class);
+        final OrderByOption<O> explicitOrderByOption = (OrderByOption<O>) queryOptions.get(OrderByOption.class);
+        final boolean usingDefaultOrderByOption = explicitOrderByOption == null;
+        final OrderByOption<O> orderByOption = usingDefaultOrderByOption ? resolveDefaultOrderByOption() : explicitOrderByOption;
 
         // Store the root query in the queryOptions, so that when retrieveRecursive() examines child branches, that
         // both the branch query and the root query will be available to PartialIndexes so they may determine if they
@@ -594,7 +597,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         }
         else {
             // Retrieve results, without using an index to accelerate ordering...
-            resultSet = retrieveWithoutIndexOrdering(query, queryOptions, orderByOption);
+            resultSet = retrieveWithoutIndexOrdering(query, queryOptions, orderByOption, usingDefaultOrderByOption);
             if (queryLog != null) {
                 queryLog.log("orderingStrategy: materialize");
             }
@@ -611,10 +614,24 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         };
     }
 
+    OrderByOption<O> resolveDefaultOrderByOption() {
+        if (persistence == null || persistence.getPrimaryKeyAttribute() == null) {
+            return null;
+        }
+        return orderBy(ascending(persistence.getPrimaryKeyAttribute()));
+    }
+
     /**
      * Retrieve results and then sort them afterwards (if sorting is required).
      */
     ResultSet<O> retrieveWithoutIndexOrdering(Query<O> query, QueryOptions queryOptions, OrderByOption<O> orderByOption) {
+        return retrieveWithoutIndexOrdering(query, queryOptions, orderByOption, false);
+    }
+
+    /**
+     * Retrieve results and then sort them afterwards (if sorting is required).
+     */
+    ResultSet<O> retrieveWithoutIndexOrdering(Query<O> query, QueryOptions queryOptions, OrderByOption<O> orderByOption, boolean preserveWrappedCosts) {
         ResultSet<O> resultSet;
         resultSet = retrieveRecursive(query, queryOptions);
 
@@ -622,7 +639,9 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         if (orderByOption != null) {
             // Wrap the results in an MaterializedOrderedResultSet.
             Comparator<O> comparator = new AttributeOrdersComparator<O>(orderByOption.getAttributeOrders(), queryOptions);
-            resultSet = new MaterializedOrderedResultSet<O>(resultSet, comparator);
+            resultSet = preserveWrappedCosts
+                    ? new CostPreservingMaterializedOrderedResultSet<O>(resultSet, comparator)
+                    : new MaterializedOrderedResultSet<O>(resultSet, comparator);
         }
         // Check if we need to deduplicate results (deduplicate using MATERIALIZE rather than LOGICAL_ELIMINATION strategy)...
         if (DeduplicationOption.isMaterialize(queryOptions)) {

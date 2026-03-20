@@ -106,7 +106,11 @@ public class WrappingPersistence<O, A extends Comparable<A>> implements Persiste
     }
 
     /**
-     * Creates a {@link WrappingPersistence} object which persists to the given collection.
+     * Creates a {@link WrappingPersistence} object which persists to the given collection and is configured with a
+     * primary key.
+     * <p/>
+     * When a primary key is configured, CQEngine treats it as the canonical object identity for persistence
+     * operations, and retrievals without an explicit {@code orderBy} default to primary-key ascending order.
      *
      * @param primaryKeyAttribute An attribute which returns the primary key of objects in the collection
      * @return A {@link WrappingPersistence} object which persists to the given collection.
@@ -122,6 +126,8 @@ public class WrappingPersistence<O, A extends Comparable<A>> implements Persiste
      * This persistence will not work with composite persistence configurations, where some indexes are located on heap,
      * and some off-heap etc. To use this persistence in those configurations, it is necessary to specify a primary
      * key - see: {@link #aroundCollectionOnPrimaryKey(Collection, SimpleAttribute)}.
+     * <p/>
+     * Because no primary key is configured, CQEngine does not guarantee any default iteration or retrieval order.
      *
      * @return A {@link WrappingPersistence} object which persists to the given collection, and which is not configured
      * with a primary key.

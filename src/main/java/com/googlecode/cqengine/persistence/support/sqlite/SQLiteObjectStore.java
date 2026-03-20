@@ -21,6 +21,7 @@ import com.googlecode.cqengine.index.sqlite.SQLitePersistence;
 import com.googlecode.cqengine.index.support.CloseableIterator;
 import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedObjectStore;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.googlecode.cqengine.resultset.iterator.UnmodifiableIterator;
@@ -28,7 +29,9 @@ import com.googlecode.cqengine.resultset.iterator.UnmodifiableIterator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static com.googlecode.cqengine.query.QueryFactory.has;
@@ -36,7 +39,7 @@ import static com.googlecode.cqengine.query.QueryFactory.has;
 /**
  * @author niall.gallagher
  */
-public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStore<O> {
+public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStore<O>, PrimaryKeyedObjectStore<O> {
 
     final SQLitePersistence<O, A> persistence;
     final SQLiteIdentityIndex<A, O> backingIndex;
@@ -60,6 +63,32 @@ public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStor
 
     public SQLiteIdentityIndex<A, O> getBackingIndex() {
         return backingIndex;
+    }
+
+    @Override
+    public SimpleAttribute<O, A> getPrimaryKeyAttribute() {
+        return primaryKeyAttribute;
+    }
+
+    @Override
+    public Object getPrimaryKeyForObject(Object object, QueryOptions queryOptions) {
+        return extractPrimaryKeyOrNull(object, queryOptions);
+    }
+
+    @Override
+    public O getObjectByPrimaryKey(Object object, QueryOptions queryOptions) {
+        final A objectId = extractPrimaryKeyOrNull(object, queryOptions);
+        if (objectId == null) {
+            return null;
+        }
+        final ResultSet<O> results = backingIndex.retrieve(equal(primaryKeyAttribute, objectId), queryOptions);
+        try {
+            final Iterator<O> iterator = results.iterator();
+            return iterator.hasNext() ? iterator.next() : null;
+        }
+        finally {
+            results.close();
+        }
     }
 
     @Override
@@ -106,14 +135,38 @@ public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStor
 
     @Override
     public boolean add(O object, QueryOptions queryOptions) {
-        return backingIndex.addAll(ObjectSet.fromCollection(Collections.singleton(object)), queryOptions);
+        return addOrReplace(object, queryOptions).isModified();
+    }
+
+    @Override
+    public ModificationResult<O> addOrReplace(O object, QueryOptions queryOptions) {
+        final O existingObject = getObjectByPrimaryKey(object, queryOptions);
+        if (existingObject != null && existingObject.equals(object)) {
+            return ModificationResult.unchanged(existingObject);
+        }
+        if (existingObject != null) {
+            removeByPrimaryKey(object, queryOptions);
+        }
+        final boolean modified = backingIndex.addAll(ObjectSet.fromCollection(Collections.singleton(object)), queryOptions);
+        if (!modified) {
+            return existingObject == null ? ModificationResult.<O>notFound() : ModificationResult.unchanged(existingObject);
+        }
+        return existingObject == null ? ModificationResult.inserted(object) : ModificationResult.replaced(existingObject, object);
     }
 
     @Override
     public boolean remove(Object o, QueryOptions queryOptions) {
-        @SuppressWarnings("unchecked")
-        O object = (O) o;
-        return backingIndex.removeAll(ObjectSet.fromCollection(Collections.singleton(object)), queryOptions);
+        return removeByPrimaryKey(o, queryOptions).isModified();
+    }
+
+    @Override
+    public ModificationResult<O> removeByPrimaryKey(Object object, QueryOptions queryOptions) {
+        final O existingObject = getObjectByPrimaryKey(object, queryOptions);
+        if (existingObject == null) {
+            return ModificationResult.notFound();
+        }
+        backingIndex.removeAll(ObjectSet.fromCollection(Collections.singleton(existingObject)), queryOptions);
+        return ModificationResult.removed(existingObject);
     }
 
     @Override
@@ -128,19 +181,22 @@ public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStor
 
     @Override
     public boolean addAll(Collection<? extends O> c, QueryOptions queryOptions) {
-        @SuppressWarnings("unchecked")
-        Collection<O> objects = (Collection<O>) c;
-        return backingIndex.addAll(ObjectSet.fromCollection(objects), queryOptions);
+        boolean modified = false;
+        for (O object : normalizeObjectsByPrimaryKeyLastWins(c, queryOptions).values()) {
+            modified = addOrReplace(object, queryOptions).isModified() || modified;
+        }
+        return modified;
     }
 
     @Override
     public boolean retainAll(Collection<?> c, QueryOptions queryOptions) {
-        // Note: this could be optimized...
-        Collection<O> objectsToRemove = new ArrayList<O>();
+        final Map<A, O> objectsToRetain = normalizeObjectsByPrimaryKeyFirstWins(c, queryOptions);
+        final Collection<O> objectsToRemove = new ArrayList<O>();
         ResultSet<O> allObjects = backingIndex.retrieve(has(primaryKeyAttribute), queryOptions);
         try {
             for (O object : allObjects) {
-                if (!c.contains(object)) {
+                final A objectId = primaryKeyAttribute.getValue(object, queryOptions);
+                if (!objectsToRetain.containsKey(objectId)) {
                     objectsToRemove.add(object);
                 }
             }
@@ -148,14 +204,20 @@ public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStor
         finally {
             allObjects.close();
         }
-        return backingIndex.removeAll(ObjectSet.fromCollection(objectsToRemove), queryOptions);
+        boolean modified = false;
+        for (O objectToRemove : objectsToRemove) {
+            modified = removeByPrimaryKey(objectToRemove, queryOptions).isModified() || modified;
+        }
+        return modified;
     }
 
     @Override
     public boolean removeAll(Collection<?> c, QueryOptions queryOptions) {
-        @SuppressWarnings("unchecked")
-        Collection<O> objects = (Collection<O>) c;
-        return backingIndex.removeAll(ObjectSet.fromCollection(objects), queryOptions);
+        boolean modified = false;
+        for (Object object : normalizeObjectsByPrimaryKeyFirstWins(c, queryOptions).values()) {
+            modified = removeByPrimaryKey(object, queryOptions).isModified() || modified;
+        }
+        return modified;
     }
 
     @Override
@@ -163,4 +225,50 @@ public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStor
         backingIndex.clear(queryOptions);
     }
 
+    A extractPrimaryKey(O object, QueryOptions queryOptions) {
+        if (object == null) {
+            throw new NullPointerException("Object was null");
+        }
+        final A primaryKey = primaryKeyAttribute.getValue(object, queryOptions);
+        if (primaryKey == null) {
+            throw new IllegalStateException("Primary key attribute returned null for object: " + object);
+        }
+        return primaryKey;
+    }
+
+    A extractPrimaryKeyOrNull(Object object, QueryOptions queryOptions) {
+        if (object == null) {
+            return null;
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            final O typedObject = (O) object;
+            return extractPrimaryKey(typedObject, queryOptions);
+        }
+        catch (ClassCastException e) {
+            return null;
+        }
+    }
+
+    Map<A, O> normalizeObjectsByPrimaryKeyFirstWins(Collection<?> objects, QueryOptions queryOptions) {
+        final Map<A, O> normalizedObjects = new LinkedHashMap<A, O>();
+        for (Object object : objects) {
+            final A primaryKey = extractPrimaryKeyOrNull(object, queryOptions);
+            if (primaryKey == null || normalizedObjects.containsKey(primaryKey)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            final O typedObject = (O) object;
+            normalizedObjects.put(primaryKey, typedObject);
+        }
+        return normalizedObjects;
+    }
+
+    Map<A, O> normalizeObjectsByPrimaryKeyLastWins(Collection<? extends O> objects, QueryOptions queryOptions) {
+        final Map<A, O> normalizedObjects = new LinkedHashMap<A, O>();
+        for (O object : objects) {
+            normalizedObjects.put(extractPrimaryKey(object, queryOptions), object);
+        }
+        return normalizedObjects;
+    }
 }
