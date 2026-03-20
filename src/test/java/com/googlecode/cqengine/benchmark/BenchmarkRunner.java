@@ -55,23 +55,46 @@ public class BenchmarkRunner {
     );
 
     public static void main(String[] args) {
-        Collection<Car> collection = CarFactory.createCollectionOfCars(COLLECTION_SIZE);
+        final BenchmarkRunnerOptions options = BenchmarkRunnerOptions.parse(args, WARMUP_REPETITIONS, MEASUREMENT_REPETITIONS);
+        final Collection<Car> collection = CarFactory.createCollectionOfCars(COLLECTION_SIZE);
+        final List<BenchmarkTask> selectedTasks = selectBenchmarkTasks(options);
         printResultsHeader(System.out);
-        for (BenchmarkTask task : benchmarkTasks) {
+        for (BenchmarkTask task : selectedTasks) {
             task.init(collection);
 
             // Warmup...
-            dummyTimingsHolder = runBenchmarkTask(task, WARMUP_REPETITIONS);
+            dummyTimingsHolder = runBenchmarkTask(task, options.getWarmupRepetitions());
 
             // Run GC...
             System.gc();
 
             // Run the benchmark task...
-            BenchmarkTaskTimings results = runBenchmarkTask(task, MEASUREMENT_REPETITIONS);
+            BenchmarkTaskTimings results = runBenchmarkTask(task, options.getMeasurementRepetitions());
 
             // Print timings for this task...
             printTimings(results, System.out);
         }
+    }
+
+    static List<BenchmarkTask> selectBenchmarkTasks(BenchmarkRunnerOptions options) {
+        final List<BenchmarkTask> selectedTasks = new ArrayList<BenchmarkTask>();
+        for (final BenchmarkTask task : benchmarkTasks) {
+            if (options.matchesTaskName(task.getClass().getSimpleName())) {
+                selectedTasks.add(task);
+            }
+        }
+        if (selectedTasks.isEmpty()) {
+            throw new IllegalArgumentException("No benchmark tasks matched filters " + options.getTaskFilters() + ". Available tasks: " + getAvailableTaskNames());
+        }
+        return selectedTasks;
+    }
+
+    static List<String> getAvailableTaskNames() {
+        final List<String> taskNames = new ArrayList<String>(benchmarkTasks.size());
+        for (final BenchmarkTask task : benchmarkTasks) {
+            taskNames.add(task.getClass().getSimpleName());
+        }
+        return taskNames;
     }
 
     static BenchmarkTaskTimings runBenchmarkTask(BenchmarkTask benchmarkTask, int repetitions) {

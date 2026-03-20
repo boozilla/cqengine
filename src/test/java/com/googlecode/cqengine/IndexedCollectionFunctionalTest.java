@@ -1290,17 +1290,17 @@ public class IndexedCollectionFunctionalTest {
                             // however it will not actually be used...
                             new QueryToEvaluate() {{
                                 query = between(Car.CAR_ID, 4, 6); // querySelectivity = 1.0 - 3/10 = 0.7
-                                queryOptions = queryOptions(orderBy(descending(Car.CAR_ID)), applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0)));
+                                queryOptions = queryOptions(orderBy(descending(Car.DOORS), descending(Car.CAR_ID)), applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0)));
                                 expectedResults = new ExpectedResults() {{
                                     size = 3;
-                                    carIdsInOrder = asList(6, 5, 4);
-                                    // The materialize strategy will be used instead because the index is quantized...
+                                    carIdsInOrder = asList(6, 4, 5);
+                                    // The materialize strategy will be used instead because the only ordering index is quantized...
                                     containsQueryLogMessages = singletonList("orderingStrategy: materialize");
                                 }};
                             }}
                     );
                     indexCombinations = indexCombinations(
-                            indexCombination(NavigableIndex.withQuantizerOnAttribute(IntegerQuantizer.withCompressionFactor(5), Car.CAR_ID))
+                            indexCombination(NavigableIndex.withQuantizerOnAttribute(IntegerQuantizer.withCompressionFactor(5), Car.DOORS))
                     );
                 }},
                 new MacroScenario() {{

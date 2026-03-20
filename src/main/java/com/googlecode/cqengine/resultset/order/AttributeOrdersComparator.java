@@ -64,7 +64,11 @@ public class AttributeOrdersComparator<O> implements Comparator<O> {
     @Override
     public int compare(O o1, O o2) {
         for (SortInstruction<O> sortInstruction : sortInstructions) {
-            final int comparison = sortInstruction.compare(o1, o2, queryOptions);
+            final int orderControlComparison = sortInstruction.compareOrderControl(o1, o2, queryOptions);
+            if (orderControlComparison != 0) {
+                return orderControlComparison;
+            }
+            final int comparison = sortInstruction.compareAttribute(o1, o2, queryOptions);
             if (comparison != 0) {
                 // Found a difference. Invert the sign if order is descending, and return it...
                 return sortInstruction.descending ? comparison * -1 : comparison;
@@ -211,9 +215,9 @@ public class AttributeOrdersComparator<O> implements Comparator<O> {
         for (int i = 0; i < sortInstructions.size(); i++) {
             final SortInstruction<O> sortInstruction = sortInstructions.get(i);
             if (sortInstruction.orderControl != null) {
-                final int comparison = compareComparableValues(left.orderControlValues[i], right.orderControlValues[i]);
-                if (comparison != 0) {
-                    return sortInstruction.descending ? comparison * -1 : comparison;
+                final int orderControlComparison = compareComparableValues(left.orderControlValues[i], right.orderControlValues[i]);
+                if (orderControlComparison != 0) {
+                    return orderControlComparison;
                 }
             }
             final int comparison = compareComparableValues(left.attributeValues[i], right.attributeValues[i]);
@@ -303,16 +307,14 @@ public class AttributeOrdersComparator<O> implements Comparator<O> {
             return simpleAttribute != null;
         }
 
-        int compare(O o1, O o2, QueryOptions queryOptions) {
+        int compareOrderControl(O o1, O o2, QueryOptions queryOptions) {
             if (orderControl != null) {
-                final int comparison = compareComparableValues(orderControl.getValue(o1, queryOptions), orderControl.getValue(o2, queryOptions));
-                if (comparison != 0) {
-                    // One of the objects has values for the delegate attribute encapsulated in OrderControlAttribute,
-                    // and the other object does not. Return this difference so that they will be ordered relative to
-                    // each other based whether they have values or not...
-                    return comparison;
-                }
+                return compareComparableValues(orderControl.getValue(o1, queryOptions), orderControl.getValue(o2, queryOptions));
             }
+            return 0;
+        }
+
+        int compareAttribute(O o1, O o2, QueryOptions queryOptions) {
             if (simpleAttribute != null) {
                 return compareComparableValues(simpleAttribute.getValue(o1, queryOptions), simpleAttribute.getValue(o2, queryOptions));
             }

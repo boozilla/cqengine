@@ -516,6 +516,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         // Log decisions made to the query log, if provided...
         final QueryLog queryLog = queryOptions.get(QueryLog.class); // might be null
 
+        final boolean querySupportsObjectFiltering = supportsObjectFiltering(query);
         SortedKeyStatisticsAttributeIndex<?, O> indexForOrdering = null;
         if (orderByOption != null) {
             // Results must be ordered. Determine the ordering strategy to use: i.e. if we should use an index to order
@@ -528,7 +529,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
             final boolean orderingByPrimaryKey = isOrderingByPrimaryKey(firstAttribute);
             Double selectivityThreshold = Thresholds.getThreshold(queryOptions, EngineThresholds.INDEX_ORDERING_SELECTIVITY);
-            if (orderingByPrimaryKey && supportsObjectFiltering(query) && hasBoundsForAttribute(query, firstAttribute)) {
+            if (orderingByPrimaryKey && querySupportsObjectFiltering && hasBoundsForAttribute(query, firstAttribute)) {
                 // When results are ordered by the primary key and the query already constrains that key,
                 // prefer streaming the bounded primary range over materializing and sorting it afterwards.
                 selectivityThreshold = 1.0;
@@ -536,7 +537,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             else if (selectivityThreshold == null) {
                 selectivityThreshold = EngineThresholds.INDEX_ORDERING_SELECTIVITY.getThresholdDefault();
             }
-            if (selectivityThreshold != 0.0 || orderingByPrimaryKey) {
+            if (querySupportsObjectFiltering && (selectivityThreshold != 0.0 || orderingByPrimaryKey)) {
                 // Index ordering can be used.
                 // Check if an index is actually available to support it...
                 // Before we check if an index is available to support index ordering, we need to account for the fact
@@ -1500,10 +1501,10 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
      */
     <A> ResultSet<O> retrieveIntersectionOfSimpleQueries(Collection<SimpleQuery<O, ?>> queries, QueryOptions queryOptions, boolean indexMergeStrategyEnabled) {
         List<ResultSet<O>> resultSets = new ArrayList<ResultSet<O>>(queries.size());
-        for (SimpleQuery query : queries) {
+        for (SimpleQuery simpleQuery : queries) {
             // Work around type erasure...
             @SuppressWarnings({"unchecked"})
-            SimpleQuery<O, A> queryTyped = (SimpleQuery<O, A>) query;
+            SimpleQuery<O, A> queryTyped = (SimpleQuery<O, A>) simpleQuery;
             ResultSet<O> resultSet = retrieveSimpleQuery(queryTyped, queryOptions);
             resultSets.add(resultSet);
         }
@@ -1511,7 +1512,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         Collection<Query<O>> queriesTyped = (Collection<Query<O>>)(Collection<? extends Query<O>>)queries;
         Query<O> query = queriesTyped.size() == 1 ? queriesTyped.iterator().next() : new And<O>(queriesTyped);
 
-        boolean useIndexMergeStrategy = indexMergeStrategyEnabled && indexesAvailableForAllResultSets(resultSets);
+        final boolean useIndexMergeStrategy = indexMergeStrategyEnabled && indexesAvailableForAllResultSets(resultSets);
         return new ResultSetIntersection<O>(resultSets, query, queryOptions, useIndexMergeStrategy);
     }
 

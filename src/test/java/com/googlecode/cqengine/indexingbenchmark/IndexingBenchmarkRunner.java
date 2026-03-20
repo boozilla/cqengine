@@ -15,11 +15,13 @@
  */
 package com.googlecode.cqengine.indexingbenchmark;
 
+import com.googlecode.cqengine.benchmark.BenchmarkRunnerOptions;
 import com.googlecode.cqengine.indexingbenchmark.task.*;
 import com.googlecode.cqengine.testutil.Car;
 import com.googlecode.cqengine.testutil.CarFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -48,22 +50,45 @@ public class IndexingBenchmarkRunner {
     );
 
     public static void main(String[] args) {
-        Collection<Car> collection = CarFactory.createCollectionOfCars(COLLECTION_SIZE);
+        final BenchmarkRunnerOptions options = BenchmarkRunnerOptions.parse(args, WARMUP_REPETITIONS, MEASUREMENT_REPETITIONS);
+        final Collection<Car> collection = CarFactory.createCollectionOfCars(COLLECTION_SIZE);
+        final List<IndexingTask> selectedTasks = selectBenchmarkTasks(options);
 
         printResultsHeader(System.out);
-        for (IndexingTask task : benchmarkTasks) {
+        for (IndexingTask task : selectedTasks) {
             // Warmup...
-            dummyTimingsHolder = runBenchmarkTask(task, WARMUP_REPETITIONS, collection);
+            dummyTimingsHolder = runBenchmarkTask(task, options.getWarmupRepetitions(), collection);
 
             // Run GC...
             System.gc();
 
             // Run the benchmark task...
-            IndexingTaskTimings results = runBenchmarkTask(task, MEASUREMENT_REPETITIONS, collection);
+            IndexingTaskTimings results = runBenchmarkTask(task, options.getMeasurementRepetitions(), collection);
 
             // Print timings for this task...
             printTimings(results, System.out);
         }
+    }
+
+    static List<IndexingTask> selectBenchmarkTasks(BenchmarkRunnerOptions options) {
+        final List<IndexingTask> selectedTasks = new ArrayList<IndexingTask>();
+        for (final IndexingTask task : benchmarkTasks) {
+            if (options.matchesTaskName(task.getClass().getSimpleName())) {
+                selectedTasks.add(task);
+            }
+        }
+        if (selectedTasks.isEmpty()) {
+            throw new IllegalArgumentException("No indexing benchmark tasks matched filters " + options.getTaskFilters() + ". Available tasks: " + getAvailableTaskNames());
+        }
+        return selectedTasks;
+    }
+
+    static List<String> getAvailableTaskNames() {
+        final List<String> taskNames = new ArrayList<String>(benchmarkTasks.size());
+        for (final IndexingTask task : benchmarkTasks) {
+            taskNames.add(task.getClass().getSimpleName());
+        }
+        return taskNames;
     }
 
     static IndexingTaskTimings runBenchmarkTask(IndexingTask indexingTask, int repetitions, Collection<Car> collection) {

@@ -15,6 +15,7 @@
  */
 package com.googlecode.cqengine.index.fallback;
 
+import com.googlecode.cqengine.attribute.SimpleAttribute;
 import com.googlecode.cqengine.index.Index;
 import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
@@ -22,13 +23,24 @@ import com.googlecode.cqengine.query.ComparativeQuery;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.query.simple.All;
+import com.googlecode.cqengine.query.simple.Between;
+import com.googlecode.cqengine.query.simple.Equal;
+import com.googlecode.cqengine.query.simple.GreaterThan;
+import com.googlecode.cqengine.query.simple.Has;
+import com.googlecode.cqengine.query.simple.In;
+import com.googlecode.cqengine.query.simple.LessThan;
 import com.googlecode.cqengine.query.simple.None;
+import com.googlecode.cqengine.query.simple.SimpleQuery;
+import com.googlecode.cqengine.query.simple.StringEndsWith;
+import com.googlecode.cqengine.query.simple.StringStartsWith;
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.googlecode.cqengine.resultset.filter.FilteringIterator;
 import com.googlecode.cqengine.resultset.iterator.IteratorUtil;
+import com.googlecode.cqengine.resultset.iterator.UnmodifiableIterator;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * A special index which when asked to retrieve data simply scans the underlying collection for matching objects.
@@ -96,6 +108,9 @@ public class FallbackIndex<O> implements Index<O> {
     @Override
     public ResultSet<O> retrieve(final Query<O> query, final QueryOptions queryOptions) {
         final ObjectSet<O> objectSet = ObjectSet.fromObjectStore(objectStore, queryOptions);
+        final ObjectMatcher<O> objectMatcher = query instanceof All || query instanceof None || query instanceof ComparativeQuery
+                ? null
+                : createObjectMatcher(query, queryOptions);
         return new ResultSet<O>() {
             @SuppressWarnings("unchecked")
             @Override
@@ -110,27 +125,46 @@ public class FallbackIndex<O> implements Index<O> {
                     return ((ComparativeQuery<O, ?>)query).getMatches(objectSet, queryOptions).iterator();
                 }
                 else {
-                    return new FilteringIterator<O>(objectSet.iterator(), queryOptions) {
-                        @Override
-                        public boolean isValid(O object, QueryOptions queryOptions) {
-                            return query.matches(object, queryOptions);
-                        }
-                    };
+                    return new MatchingIterator<O>(objectSet.iterator(), objectMatcher);
                 }
             }
             @Override
             public boolean contains(O object) {
-                // Contains is based on objects contained in this *filtered* ResultSet, so delegate to iterator...
-                return IteratorUtil.iterableContains(this, object);
+                if (query instanceof ComparativeQuery) {
+                    // Contains is based on objects contained in this *filtered* ResultSet, so delegate to iterator...
+                    return IteratorUtil.iterableContains(this, object);
+                }
+                return objectStore.contains(object, queryOptions) && objectMatcher.matches(object);
             }
             @Override
             public int size() {
-                // Size is based on objects contained in this *filtered* ResultSet, so delegate to iterator...
-                return IteratorUtil.countElements(this);
+                if (query instanceof All) {
+                    return objectStore.size(queryOptions);
+                }
+                if (query instanceof None) {
+                    return 0;
+                }
+                if (query instanceof ComparativeQuery) {
+                    // Size is based on objects contained in this *filtered* ResultSet, so delegate to iterator...
+                    return IteratorUtil.countElements(this);
+                }
+                final ObjectSet<O> countObjectSet = ObjectSet.fromObjectStore(objectStore, queryOptions);
+                try {
+                    int count = 0;
+                    for (final O object : countObjectSet) {
+                        if (objectMatcher.matches(object)) {
+                            count++;
+                        }
+                    }
+                    return count;
+                }
+                finally {
+                    countObjectSet.close();
+                }
             }
             @Override
             public boolean matches(O object) {
-                return query instanceof ComparativeQuery ? contains(object) : query.matches(object, queryOptions);
+                return query instanceof ComparativeQuery ? contains(object) : objectMatcher.matches(object);
             }
             @Override
             public int getRetrievalCost() {
@@ -155,6 +189,216 @@ public class FallbackIndex<O> implements Index<O> {
                 return queryOptions;
             }
         };
+    }
+
+    static <O> ObjectMatcher<O> createObjectMatcher(final Query<O> query, final QueryOptions queryOptions) {
+        if (!(query instanceof SimpleQuery)) {
+            return new ObjectMatcher<O>() {
+                @Override
+                public boolean matches(O object) {
+                    return query.matches(object, queryOptions);
+                }
+            };
+        }
+        final SimpleQuery<O, ?> simpleQuery = (SimpleQuery<O, ?>) query;
+        if (!(simpleQuery.getAttribute() instanceof SimpleAttribute)) {
+            return new ObjectMatcher<O>() {
+                @Override
+                public boolean matches(O object) {
+                    return query.matches(object, queryOptions);
+                }
+            };
+        }
+        if (query instanceof Equal) {
+            return createEqualMatcher((Equal<O, ?>) query, queryOptions);
+        }
+        if (query instanceof In) {
+            return createInMatcher((In<O, ?>) query, queryOptions);
+        }
+        if (query instanceof Has) {
+            return createHasMatcher((Has<O, ?>) query, queryOptions);
+        }
+        if (query instanceof LessThan) {
+            return createLessThanMatcher((LessThan<O, ? extends Comparable>) query, queryOptions);
+        }
+        if (query instanceof GreaterThan) {
+            return createGreaterThanMatcher((GreaterThan<O, ? extends Comparable>) query, queryOptions);
+        }
+        if (query instanceof Between) {
+            return createBetweenMatcher((Between<O, ? extends Comparable>) query, queryOptions);
+        }
+        if (query instanceof StringStartsWith) {
+            return createStringStartsWithMatcher((StringStartsWith<O, ? extends CharSequence>) query, queryOptions);
+        }
+        if (query instanceof StringEndsWith) {
+            return createStringEndsWithMatcher((StringEndsWith<O, ? extends CharSequence>) query, queryOptions);
+        }
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                return query.matches(object, queryOptions);
+            }
+        };
+    }
+
+    static <O, A> ObjectMatcher<O> createEqualMatcher(final Equal<O, A> equal, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) equal.getAttribute();
+        final A value = equal.getValue();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                return value.equals(attribute.getValue(object, queryOptions));
+            }
+        };
+    }
+
+    static <O, A> ObjectMatcher<O> createInMatcher(final In<O, A> in, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) in.getAttribute();
+        final Set<A> values = in.getValues();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                return values.contains(attribute.getValue(object, queryOptions));
+            }
+        };
+    }
+
+    static <O, A> ObjectMatcher<O> createHasMatcher(final Has<O, A> has, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) has.getAttribute();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                return attribute.getValue(object, queryOptions) != null;
+            }
+        };
+    }
+
+    static <O, A extends Comparable<A>> ObjectMatcher<O> createLessThanMatcher(final LessThan<O, A> lessThan, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) lessThan.getAttribute();
+        final A value = lessThan.getValue();
+        final boolean inclusive = lessThan.isValueInclusive();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                final A attributeValue = attribute.getValue(object, queryOptions);
+                return inclusive ? value.compareTo(attributeValue) >= 0 : value.compareTo(attributeValue) > 0;
+            }
+        };
+    }
+
+    static <O, A extends Comparable<A>> ObjectMatcher<O> createGreaterThanMatcher(final GreaterThan<O, A> greaterThan, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) greaterThan.getAttribute();
+        final A value = greaterThan.getValue();
+        final boolean inclusive = greaterThan.isValueInclusive();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                final A attributeValue = attribute.getValue(object, queryOptions);
+                return inclusive ? value.compareTo(attributeValue) <= 0 : value.compareTo(attributeValue) < 0;
+            }
+        };
+    }
+
+    static <O, A extends Comparable<A>> ObjectMatcher<O> createBetweenMatcher(final Between<O, A> between, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) between.getAttribute();
+        final A lowerValue = between.getLowerValue();
+        final A upperValue = between.getUpperValue();
+        final boolean lowerInclusive = between.isLowerInclusive();
+        final boolean upperInclusive = between.isUpperInclusive();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                final A attributeValue = attribute.getValue(object, queryOptions);
+                if (lowerInclusive && upperInclusive) {
+                    return lowerValue.compareTo(attributeValue) <= 0 && upperValue.compareTo(attributeValue) >= 0;
+                }
+                if (lowerInclusive) {
+                    return lowerValue.compareTo(attributeValue) <= 0 && upperValue.compareTo(attributeValue) > 0;
+                }
+                if (upperInclusive) {
+                    return lowerValue.compareTo(attributeValue) < 0 && upperValue.compareTo(attributeValue) >= 0;
+                }
+                return lowerValue.compareTo(attributeValue) < 0 && upperValue.compareTo(attributeValue) > 0;
+            }
+        };
+    }
+
+    static <O, A extends CharSequence> ObjectMatcher<O> createStringStartsWithMatcher(final StringStartsWith<O, A> startsWith, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) startsWith.getAttribute();
+        final A value = startsWith.getValue();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                return StringStartsWith.matchesValue(attribute.getValue(object, queryOptions), value, queryOptions);
+            }
+        };
+    }
+
+    static <O, A extends CharSequence> ObjectMatcher<O> createStringEndsWithMatcher(final StringEndsWith<O, A> endsWith, final QueryOptions queryOptions) {
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, A> attribute = (SimpleAttribute<O, A>) endsWith.getAttribute();
+        return new ObjectMatcher<O>() {
+            @Override
+            public boolean matches(O object) {
+                return endsWith.matchesValue(attribute.getValue(object, queryOptions), queryOptions);
+            }
+        };
+    }
+
+    interface ObjectMatcher<O> {
+        boolean matches(O object);
+    }
+
+    static class MatchingIterator<O> extends UnmodifiableIterator<O> {
+        final Iterator<O> wrappedIterator;
+        final ObjectMatcher<O> objectMatcher;
+
+        O nextObject = null;
+        boolean nextObjectIsNull = false;
+        boolean finished = false;
+
+        MatchingIterator(Iterator<O> wrappedIterator, ObjectMatcher<O> objectMatcher) {
+            this.wrappedIterator = wrappedIterator;
+            this.objectMatcher = objectMatcher;
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (finished) {
+                return false;
+            }
+            if (nextObjectIsNull || nextObject != null) {
+                return true;
+            }
+            while (wrappedIterator.hasNext()) {
+                nextObject = wrappedIterator.next();
+                if (objectMatcher.matches(nextObject)) {
+                    nextObjectIsNull = (nextObject == null);
+                    return true;
+                }
+                nextObjectIsNull = false;
+            }
+            finished = true;
+            return false;
+        }
+
+        @Override
+        public O next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            final O objectToReturn = nextObject;
+            nextObject = null;
+            nextObjectIsNull = false;
+            return objectToReturn;
+        }
     }
 
     /**
