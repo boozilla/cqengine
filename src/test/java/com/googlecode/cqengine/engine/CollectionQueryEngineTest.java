@@ -215,6 +215,18 @@ public class CollectionQueryEngineTest {
     }
 
     @Test
+    public void testGetBoundsFromQuery_BetweenCreatesBoundedRange() {
+        final Query<Car> query = and(between(Car.CAR_ID, 2, false, 9, true), equal(Car.COLOR, Car.Color.BLUE));
+
+        final CollectionQueryEngine.RangeBounds<Integer> bounds = CollectionQueryEngine.getBoundsFromQuery(query, Car.CAR_ID);
+
+        Assert.assertEquals(Integer.valueOf(2), bounds.lowerBound);
+        Assert.assertFalse(bounds.lowerInclusive);
+        Assert.assertEquals(Integer.valueOf(9), bounds.upperBound);
+        Assert.assertTrue(bounds.upperInclusive);
+    }
+
+    @Test
     public void testImplicitPrimaryKeyOrderingUsesMaterializeForSelectiveSecondaryFilter() {
         final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
         final StringBuilder queryLogSink = new StringBuilder();
@@ -231,6 +243,25 @@ public class CollectionQueryEngineTest {
     }
 
     @Test
+    public void testImplicitPrimaryKeyOrderingUsesIndexForPrimaryKeyRange() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(
+                and(greaterThanOrEqualTo(Car.CAR_ID, 7), lessThanOrEqualTo(Car.CAR_ID, 9), equal(Car.COLOR, Car.Color.BLUE)),
+                queryOptions(new QueryLog(queryLogSink))
+        );
+
+        try {
+            Assert.assertEquals(asList(7, 9), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: index"));
+    }
+
+    @Test
     public void testImplicitPrimaryKeyOrderingUsesIndexForPrimaryKeyEquality() {
         final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
         final StringBuilder queryLogSink = new StringBuilder();
@@ -244,6 +275,38 @@ public class CollectionQueryEngineTest {
         }
 
         Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: index"));
+    }
+
+    @Test
+    public void testImplicitPrimaryKeyOrderingUsesMaterializeForPrimaryKeyOrQuery() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(or(equal(Car.CAR_ID, 8), equal(Car.CAR_ID, 9)), queryOptions(new QueryLog(queryLogSink)));
+
+        try {
+            Assert.assertEquals(asList(8, 9), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: materialize"));
+    }
+
+    @Test
+    public void testExplicitPrimaryKeyOrderingUsesMaterializeInsteadOfBackingIndexShortcut() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(equal(Car.COLOR, Car.Color.BLUE), queryOptions(orderBy(ascending(Car.CAR_ID)), new QueryLog(queryLogSink)));
+
+        try {
+            Assert.assertEquals(asList(7, 9), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: materialize"));
     }
 
     @Test(expected = IllegalStateException.class)

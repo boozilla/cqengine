@@ -105,12 +105,13 @@ CQEngine은 프로그램적 쿼리 API 외에도 SQL/CQN 문자열 파서를 지
 identity와 기본 정렬 기준으로 함께 사용합니다.
 
 - collection iteration과 top-level `retrieve(query)`는 명시적 `orderBy(...)`가 없으면 primary ascending입니다.
+- primary-keyed persistence에서 명시적 `orderBy(...)`를 사용해도, 동률은 primary key ascending으로 안정화되어 pagination 결과가 결정적입니다.
 - ordered backing index를 사용할 수 있는 primary-keyed persistence에서는 이 기본 순서를 위해 매 쿼리마다 별도 materialized sort를 수행하지 않습니다.
 - `update()`, `removeAll()`, `retainAll()` 같은 write path는 primary key 기준으로 교체/제거를 동기화합니다.
 - `TransactionalIndexedCollection`은 primary-keyed persistence에서 same-primary replacement를 원자적 교체로 처리합니다.
 - primary key가 없는 persistence는 기존처럼 기본 순서를 보장하지 않습니다.
 
-명시적 `orderBy(...)`는 항상 이 기본 순서보다 우선합니다.
+명시적 `orderBy(...)`는 항상 이 기본 순서보다 우선하며, primary-keyed persistence에서는 primary key를 마지막 tie-breaker로 자동 추가합니다.
 
 - [트랜잭션 격리(MVCC)](https://github.com/boozilla/cqengine/wiki/TransactionIsolation)
 - [병합 전략](https://github.com/boozilla/cqengine/wiki/MergeStrategies)

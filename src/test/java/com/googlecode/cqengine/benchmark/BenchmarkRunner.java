@@ -47,6 +47,7 @@ public class BenchmarkRunner {
             new CompoundIndex_ManufacturerToyotaColorBlueDoorsThree(),
             new NoIndexes_ModelFocus(),
             new NonOptimalIndexes_ManufacturerToyotaColorBlueDoorsThree(),
+            new ImplicitPrimaryKeyOrder_ColorBlue(),
             new StandingQueryIndex_ManufacturerToyotaColorBlueDoorsNotFive(),
             new RadixTreeIndex_ModelStartsWithP(),
             new SuffixTreeIndex_ModelContainsG(),

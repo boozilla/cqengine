@@ -483,7 +483,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         @SuppressWarnings("unchecked")
         final OrderByOption<O> explicitOrderByOption = (OrderByOption<O>) queryOptions.get(OrderByOption.class);
         final boolean usingDefaultOrderByOption = explicitOrderByOption == null;
-        final OrderByOption<O> orderByOption = usingDefaultOrderByOption ? resolveDefaultOrderByOption() : explicitOrderByOption;
+        final OrderByOption<O> orderByOption = usingDefaultOrderByOption ? resolveDefaultOrderByOption() : resolveExplicitOrderByOption(explicitOrderByOption);
         final boolean usingImplicitPrimaryKeyOrdering = usingDefaultOrderByOption && orderByOption != null;
 
         // Store the root query in the queryOptions, so that when retrieveRecursive() examines child branches, that
@@ -502,12 +502,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             final List<AttributeOrder<O>> allSortOrders = orderByOption.getAttributeOrders();
             AttributeOrder<O> firstOrder = allSortOrders.iterator().next();
             @SuppressWarnings("unchecked")
-            Attribute<O, Comparable> firstAttribute = (Attribute<O, Comparable>)firstOrder.getAttribute();
-            if (firstAttribute instanceof OrderControlAttribute) {
-                @SuppressWarnings("unchecked")
-                Attribute<O, Comparable> firstAttributeDelegate = ((OrderControlAttribute)firstAttribute).getDelegateAttribute();
-                firstAttribute = firstAttributeDelegate;
-            }
+            Attribute<O, Comparable> firstAttribute = (Attribute<O, Comparable>) getAttributeOrderDelegate(firstOrder);
 
             Double selectivityThreshold = Thresholds.getThreshold(queryOptions, EngineThresholds.INDEX_ORDERING_SELECTIVITY);
             if (usingImplicitPrimaryKeyOrdering && supportsObjectFiltering(query) && hasBoundsForAttribute(query, firstAttribute)) {
@@ -638,6 +633,42 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             return null;
         }
         return orderBy(ascending(persistence.getPrimaryKeyAttribute()));
+    }
+
+    OrderByOption<O> resolveExplicitOrderByOption(OrderByOption<O> explicitOrderByOption) {
+        if (persistence == null) {
+            return explicitOrderByOption;
+        }
+        final Attribute<O, ? extends Comparable> primaryKeyAttribute = persistence.getPrimaryKeyAttribute();
+        if (primaryKeyAttribute == null) {
+            return explicitOrderByOption;
+        }
+        if (containsOrderForAttribute(explicitOrderByOption.getAttributeOrders(), primaryKeyAttribute)) {
+            return explicitOrderByOption;
+        }
+        final List<AttributeOrder<O>> attributeOrders = explicitOrderByOption.getAttributeOrders();
+        final List<AttributeOrder<O>> deterministicAttributeOrders = new ArrayList<AttributeOrder<O>>(attributeOrders.size() + 1);
+        deterministicAttributeOrders.addAll(attributeOrders);
+        deterministicAttributeOrders.add(ascending(primaryKeyAttribute));
+        return orderBy(deterministicAttributeOrders);
+    }
+
+    static <O> boolean containsOrderForAttribute(List<AttributeOrder<O>> attributeOrders, Attribute<O, ? extends Comparable> attribute) {
+        for (AttributeOrder<O> attributeOrder : attributeOrders) {
+            if (attribute.equals(getAttributeOrderDelegate(attributeOrder))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static <O> Attribute<O, ? extends Comparable> getAttributeOrderDelegate(AttributeOrder<O> attributeOrder) {
+        final Attribute<O, ? extends Comparable> attribute = attributeOrder.getAttribute();
+        if (attribute instanceof OrderControlAttribute) {
+            return (Attribute<O, ? extends Comparable>) ((OrderControlAttribute) attribute).getDelegateAttribute();
+        }
+        return attribute;
     }
 
     static <O> boolean supportsObjectFiltering(Query<O> query) {
