@@ -35,6 +35,7 @@ import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.persistence.support.ObjectStoreResultSet;
 import com.googlecode.cqengine.persistence.support.PrimaryKeyedOnHeapObjectStore;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedOnHeapObjectStoreIndex;
 import com.googlecode.cqengine.persistence.support.sqlite.SQLiteObjectStore;
 import com.googlecode.cqengine.query.ComparativeQuery;
 import com.googlecode.cqengine.query.Query;
@@ -44,6 +45,7 @@ import com.googlecode.cqengine.query.logical.Not;
 import com.googlecode.cqengine.query.logical.Or;
 import com.googlecode.cqengine.query.option.*;
 import com.googlecode.cqengine.query.simple.Between;
+import com.googlecode.cqengine.query.simple.Equal;
 import com.googlecode.cqengine.query.simple.GreaterThan;
 import com.googlecode.cqengine.query.simple.LessThan;
 import com.googlecode.cqengine.query.simple.SimpleQuery;
@@ -497,28 +499,28 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             // Results must be ordered. Determine the ordering strategy to use: i.e. if we should use an index to order
             // results, or if we should retrieve results and sort them afterwards instead.
 
+            final List<AttributeOrder<O>> allSortOrders = orderByOption.getAttributeOrders();
+            AttributeOrder<O> firstOrder = allSortOrders.iterator().next();
+            @SuppressWarnings("unchecked")
+            Attribute<O, Comparable> firstAttribute = (Attribute<O, Comparable>)firstOrder.getAttribute();
+            if (firstAttribute instanceof OrderControlAttribute) {
+                @SuppressWarnings("unchecked")
+                Attribute<O, Comparable> firstAttributeDelegate = ((OrderControlAttribute)firstAttribute).getDelegateAttribute();
+                firstAttribute = firstAttributeDelegate;
+            }
+
             Double selectivityThreshold = Thresholds.getThreshold(queryOptions, EngineThresholds.INDEX_ORDERING_SELECTIVITY);
-            if (usingImplicitPrimaryKeyOrdering) {
-                // Avoid per-query materialized sorting when CQEngine injects the default primary-key ordering.
-                // If an ordered backing index exists, prefer streaming from it directly and filtering candidates.
+            if (usingImplicitPrimaryKeyOrdering && supportsObjectFiltering(query) && hasBoundsForAttribute(query, firstAttribute)) {
+                // When CQEngine injects primary-key ordering and the query already constrains that key,
+                // prefer streaming the bounded primary range over materializing and sorting it afterwards.
                 selectivityThreshold = 1.0;
             }
             else if (selectivityThreshold == null) {
                 selectivityThreshold = EngineThresholds.INDEX_ORDERING_SELECTIVITY.getThresholdDefault();
             }
-            final List<AttributeOrder<O>> allSortOrders = orderByOption.getAttributeOrders();
             if (selectivityThreshold != 0.0) {
                 // Index ordering can be used.
                 // Check if an index is actually available to support it...
-                AttributeOrder<O> firstOrder = allSortOrders.iterator().next();
-                @SuppressWarnings("unchecked")
-                Attribute<O, Comparable> firstAttribute = (Attribute<O, Comparable>)firstOrder.getAttribute();
-                if (firstAttribute instanceof OrderControlAttribute) {
-                    @SuppressWarnings("unchecked")
-                    Attribute<O, Comparable> firstAttributeDelegate = ((OrderControlAttribute)firstAttribute).getDelegateAttribute();
-                    firstAttribute = firstAttributeDelegate;
-                }
-
                 // Before we check if an index is available to support index ordering, we need to account for the fact
                 // that even if such an index is available, it might not contain all objects in the collection.
                 //
@@ -538,6 +540,9 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
                     // also will be able to retrieve objects which do not have values for the non-SimpleAttribute
                     // efficiently. Now check if an index exists which would allow index ordering...
                     for (Index<O> index : this.getIndexesOnAttribute(firstAttribute)) {
+                        if (!usingImplicitPrimaryKeyOrdering && index instanceof PrimaryKeyedOnHeapObjectStoreIndex) {
+                            continue;
+                        }
                         if (index instanceof SortedKeyStatisticsAttributeIndex && !index.isQuantized()) {
                             indexForOrdering = (SortedKeyStatisticsAttributeIndex<?, O>)index;
                             break;
@@ -633,6 +638,28 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             return null;
         }
         return orderBy(ascending(persistence.getPrimaryKeyAttribute()));
+    }
+
+    static <O> boolean supportsObjectFiltering(Query<O> query) {
+        if (query instanceof ComparativeQuery) {
+            return false;
+        }
+        if (!(query instanceof LogicalQuery)) {
+            return true;
+        }
+        LogicalQuery<O> logicalQuery = (LogicalQuery<O>) query;
+        for (Query<O> childQuery : logicalQuery.getChildQueries()) {
+            if (!supportsObjectFiltering(childQuery)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static <O> boolean hasBoundsForAttribute(Query<O> query, Attribute<O, ?> attribute) {
+        RangeBounds<?> bounds = getBoundsFromQuery(query, (Attribute) attribute);
+        return bounds.lowerBound != null || bounds.upperBound != null;
     }
 
     /**
@@ -973,7 +1000,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         }
     }
 
-    static <A extends Comparable<A>, O> RangeBounds getBoundsFromQuery(Query<O> query, Attribute<O, A> attribute) {
+    static <A extends Comparable<A>, O> RangeBounds<A> getBoundsFromQuery(Query<O> query, Attribute<O, A> attribute) {
         A lowerBound = null, upperBound = null;
         boolean lowerInclusive = false, upperInclusive = false;
         List<SimpleQuery<O, ?>> candidateRangeQueries = Collections.emptyList();
@@ -988,7 +1015,16 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         }
         for (SimpleQuery<O, ?> candidate : candidateRangeQueries) {
             if (attribute.equals(candidate.getAttribute())) {
-                if (candidate instanceof GreaterThan) {
+                if (candidate instanceof Equal) {
+                    @SuppressWarnings("unchecked")
+                    Equal<O, A> equal = (Equal<O, A>) candidate;
+                    lowerBound = equal.getValue();
+                    lowerInclusive = true;
+                    upperBound = equal.getValue();
+                    upperInclusive = true;
+                    break;
+                }
+                else if (candidate instanceof GreaterThan) {
                     @SuppressWarnings("unchecked")
                     GreaterThan<O, A> bound = (GreaterThan<O, A>) candidate;
                     lowerBound = bound.getValue();

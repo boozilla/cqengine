@@ -30,6 +30,7 @@ import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.persistence.wrapping.WrappingPersistence;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.QueryFactory;
+import com.googlecode.cqengine.query.option.QueryLog;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.googlecode.cqengine.testutil.Car;
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 
 import static com.googlecode.cqengine.query.QueryFactory.*;
 import static com.googlecode.cqengine.resultset.iterator.IteratorUtil.countElements;
+import static java.util.Arrays.asList;
 
 public class CollectionQueryEngineTest {
 
@@ -200,6 +202,50 @@ public class CollectionQueryEngineTest {
         Assert.assertEquals(0, countElements(queryEngine.getIndexes()));
     }
 
+    @Test
+    public void testGetBoundsFromQuery_EqualCreatesExactRange() {
+        final Query<Car> query = and(equal(Car.CAR_ID, 8), equal(Car.COLOR, Car.Color.RED));
+
+        final CollectionQueryEngine.RangeBounds<Integer> bounds = CollectionQueryEngine.getBoundsFromQuery(query, Car.CAR_ID);
+
+        Assert.assertEquals(Integer.valueOf(8), bounds.lowerBound);
+        Assert.assertTrue(bounds.lowerInclusive);
+        Assert.assertEquals(Integer.valueOf(8), bounds.upperBound);
+        Assert.assertTrue(bounds.upperInclusive);
+    }
+
+    @Test
+    public void testImplicitPrimaryKeyOrderingUsesMaterializeForSelectiveSecondaryFilter() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(equal(Car.COLOR, Car.Color.BLUE), queryOptions(new QueryLog(queryLogSink)));
+
+        try {
+            Assert.assertEquals(asList(7, 9), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: materialize"));
+    }
+
+    @Test
+    public void testImplicitPrimaryKeyOrderingUsesIndexForPrimaryKeyEquality() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(and(equal(Car.CAR_ID, 8), equal(Car.COLOR, Car.Color.RED)), queryOptions(new QueryLog(queryLogSink)));
+
+        try {
+            Assert.assertEquals(Collections.singletonList(8), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: index"));
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testRemoveIndex_ArgumentValidation1() {
         CollectionQueryEngine<Car> queryEngine = new CollectionQueryEngine<Car>();
@@ -216,6 +262,13 @@ public class CollectionQueryEngineTest {
 
     static ObjectStore<Car> emptyObjectStore() {
         return new ConcurrentOnHeapObjectStore<Car>();
+    }
+
+    static IndexedCollection<Car> createPrimaryKeyedCollection() {
+        final IndexedCollection<Car> collection = new ConcurrentIndexedCollection<Car>(OnHeapPersistence.onPrimaryKey(Car.CAR_ID));
+        collection.addIndex(NavigableIndex.onAttribute(Car.COLOR));
+        collection.addAll(CarFactory.createCollectionOfCars(10));
+        return collection;
     }
 
     static HashIndex<Integer, Car> createImmutableIndex() {
