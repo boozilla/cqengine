@@ -128,9 +128,7 @@ public class Car {
 
         Car car = (Car) o;
 
-        if (carId != car.carId) return false;
-
-        return true;
+        return carId == car.carId;
     }
 
     @Override

@@ -205,8 +205,8 @@ public class ApacheSolrDataMathParser {
     }
 
 
-    private TimeZone zone;
-    private Locale loc;
+    private final TimeZone zone;
+    private final Locale loc;
     private Date now;
 
     /**
@@ -310,7 +310,7 @@ public class ApacheSolrDataMathParser {
                                 ("Not a Number: \"" + ops[pos-1] + "\"", pos-1);
                     }
                     if ('-' == command) {
-                        val = 0 - val;
+                        val = -val;
                     }
                     try {
                         String unit = ops[pos++];
@@ -329,6 +329,6 @@ public class ApacheSolrDataMathParser {
         return cal.getTime();
     }
 
-    private static Pattern splitter = Pattern.compile("\\b|(?<=\\d)(?=\\D)");
+    private static final Pattern splitter = Pattern.compile("\\b|(?<=\\d)(?=\\D)");
 
 }

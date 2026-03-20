@@ -218,6 +218,6 @@ public class CompositePersistence<O, A extends Comparable<A>> implements Persist
      * @throws IllegalArgumentException If any of the Persistence objects are not on the same primary key.
      */
     public static <O, A extends Comparable<A>> CompositePersistence<O, A> of(Persistence<O, A> primaryPersistence, Persistence<O, A> secondaryPersistence) {
-        return new CompositePersistence<O, A>(primaryPersistence, secondaryPersistence, Collections.<Persistence<O, A>>emptyList());
+        return new CompositePersistence<O, A>(primaryPersistence, secondaryPersistence, Collections.emptyList());
     }
 }

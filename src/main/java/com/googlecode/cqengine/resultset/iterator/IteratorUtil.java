@@ -100,8 +100,8 @@ public class IteratorUtil {
             @Override
             public Iterator<KeyValue<A, O>> iterator() {
                 return new LazyIterator<KeyValue<A, O>>() {
-                    Iterator<? extends Map.Entry<A, ? extends Iterable<O>>> entriesIterator = map.entrySet().iterator();
-                    Iterator<KeyValue<A, O>> valuesIterator = Collections.<KeyValue<A, O>>emptySet().iterator();
+                    final Iterator<? extends Map.Entry<A, ? extends Iterable<O>>> entriesIterator = map.entrySet().iterator();
+                    Iterator<KeyValue<A, O>> valuesIterator = Collections.emptyIterator();
                     @Override
                     protected KeyValue<A, O> computeNext() {
                         while (true) {

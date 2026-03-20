@@ -46,8 +46,8 @@ public class SQLiteIndexFlags {
         /**
          * <p> Indicates that the batch is the last batch and that the SQLiteIndex needs to reinstate the index on the table
          */
-        LAST;
-    };
+        LAST
+    }
 
     /**
      * <p> Switches off the 'synchronous' and 'journal_mode' pragmas before executing a bulk import.

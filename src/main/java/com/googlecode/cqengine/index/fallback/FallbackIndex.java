@@ -109,7 +109,7 @@ public class FallbackIndex<O> implements Index<O> {
                     return IteratorUtil.wrapAsUnmodifiable(objectSet.iterator());
                 }
                 else if (query instanceof None) {
-                    return Collections.<O>emptyList().iterator();
+                    return Collections.emptyIterator();
                 }
                 else if (query instanceof ComparativeQuery) {
                     return ((ComparativeQuery<O, ?>)query).getMatches(objectSet, queryOptions).iterator();

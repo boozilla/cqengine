@@ -99,9 +99,7 @@ public class LessThan<O, A extends Comparable<A>> extends SimpleQuery<O, A> {
 
         if (!attribute.equals(lessThan.attribute)) return false;
         if (valueInclusive != lessThan.valueInclusive) return false;
-        if (!value.equals(lessThan.value)) return false;
-
-        return true;
+        return value.equals(lessThan.value);
     }
 
     @Override

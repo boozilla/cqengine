@@ -28,10 +28,7 @@ import com.googlecode.cqengine.testutil.Car;
 import com.googlecode.cqengine.testutil.CarFactory;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.*;
 
 import static com.googlecode.cqengine.query.QueryFactory.*;
 import static java.util.Arrays.asList;
@@ -78,7 +75,7 @@ public class ReadOnlyPersistenceTest {
         expectUnsupportedOperation(new Runnable() {
             @Override
             public void run() {
-                indexedCollection.update(asList(CarFactory.createCar(0)), asList(CarFactory.createCar(3)));
+                indexedCollection.update(Collections.singletonList(CarFactory.createCar(0)), Collections.singletonList(CarFactory.createCar(3)));
             }
         });
         expectUnsupportedOperation(new Runnable() {

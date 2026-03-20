@@ -20,6 +20,8 @@ import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.examples.introduction.Car;
 import com.googlecode.cqengine.query.Query;
 
+import java.util.Collections;
+
 import static com.googlecode.cqengine.query.QueryFactory.*;
 import static java.util.Arrays.asList;
 
@@ -36,15 +38,15 @@ public class SqlExists {
         IndexedCollection<Car> cars = new ConcurrentIndexedCollection<Car>();
         cars.add(new Car(1, "Ford Focus", "great condition, low mileage", asList("spare tyre", "sunroof")));
         cars.add(new Car(2, "Ford Taurus", "dirty and unreliable, flat tyre", asList("spare tyre", "radio")));
-        cars.add(new Car(3, "Honda Civic", "has a flat tyre and high mileage", asList("radio")));
+        cars.add(new Car(3, "Honda Civic", "has a flat tyre and high mileage", Collections.singletonList("radio")));
         cars.add(new Car(4, "BMW M3", "2013 model", asList("radio", "convertible")));
 
         // Create an indexed collection of garages...
         final IndexedCollection<Garage> garages = new ConcurrentIndexedCollection<Garage>();
         garages.add(new Garage(1, "Joe's garage", "London", asList("Ford Focus", "Honda Civic")));
-        garages.add(new Garage(2, "Jane's garage", "Dublin", asList("BMW M3")));
+        garages.add(new Garage(2, "Jane's garage", "Dublin", Collections.singletonList("BMW M3")));
         garages.add(new Garage(3, "John's garage", "Dublin", asList("Ford Focus", "Ford Taurus")));
-        garages.add(new Garage(4, "Jill's garage", "Dublin", asList("Ford Focus")));
+        garages.add(new Garage(4, "Jill's garage", "Dublin", Collections.singletonList("Ford Focus")));
 
         // Query: Cars which are convertible or which have a sunroof, which can be serviced in Dublin...
         Query<Car> carsQuery = and(

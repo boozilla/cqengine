@@ -67,9 +67,7 @@ public class And<O> extends LogicalQuery<O> {
 
         And and = (And) o;
 
-        if (!childQueries.equals(and.childQueries)) return false;
-
-        return true;
+        return childQueries.equals(and.childQueries);
     }
 
     @Override

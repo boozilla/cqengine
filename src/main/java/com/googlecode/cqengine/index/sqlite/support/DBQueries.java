@@ -65,9 +65,7 @@ public class DBQueries {
             Row row = (Row) o;
 
             if (!objectKey.equals(row.objectKey)) return false;
-            if (!value.equals(row.value)) return false;
-
-            return true;
+            return value.equals(row.value);
         }
 
         @Override
@@ -506,7 +504,7 @@ public class DBQueries {
         final String selectSql = String.format("SELECT COUNT(objectKey) FROM cqtbl_%s", tableName);
         PreparedStatement statement = null;
         try {
-            statement = createAndBindSelectPreparedStatement(selectSql, "", Collections.<WhereClause>emptyList(), query, connection);
+            statement = createAndBindSelectPreparedStatement(selectSql, "", Collections.emptyList(), query, connection);
             java.sql.ResultSet resultSet = statement.executeQuery();
 
             if (!resultSet.next()) {
@@ -529,7 +527,7 @@ public class DBQueries {
         final String selectSql = String.format("SELECT COUNT(1) AS countDistinct FROM (SELECT objectKey FROM cqtbl_%s", tableName);
         PreparedStatement statement = null;
         try{
-            statement = createAndBindSelectPreparedStatement(selectSql, " GROUP BY objectKey)", Collections.<WhereClause>emptyList(), query, connection);
+            statement = createAndBindSelectPreparedStatement(selectSql, " GROUP BY objectKey)", Collections.emptyList(), query, connection);
             java.sql.ResultSet resultSet = statement.executeQuery();
 
             if (!resultSet.next()){
@@ -549,7 +547,7 @@ public class DBQueries {
         final String selectSql = String.format("SELECT DISTINCT objectKey FROM cqtbl_%s",tableName);
         PreparedStatement statement = null;
         try{
-            statement = createAndBindSelectPreparedStatement(selectSql, "", Collections.<WhereClause>emptyList(), query, connection);
+            statement = createAndBindSelectPreparedStatement(selectSql, "", Collections.emptyList(), query, connection);
             return statement.executeQuery();
         }catch(Exception e){
             DBUtils.closeQuietly(statement);
@@ -564,7 +562,7 @@ public class DBQueries {
         PreparedStatement statement = null;
         try{
             String orderByClause = descending ? " ORDER BY value DESC" : " ORDER BY value ASC";
-            statement = createAndBindSelectPreparedStatement(selectSql, orderByClause, Collections.<WhereClause>emptyList(), query, connection);
+            statement = createAndBindSelectPreparedStatement(selectSql, orderByClause, Collections.emptyList(), query, connection);
             return statement.executeQuery();
         }catch(Exception e){
             DBUtils.closeQuietly(statement);
@@ -579,7 +577,7 @@ public class DBQueries {
         PreparedStatement statement = null;
         try{
             String orderByClause = descending ? " ORDER BY value DESC" : " ORDER BY value ASC";
-            statement = createAndBindSelectPreparedStatement(selectSql, orderByClause, Collections.<WhereClause>emptyList(), query, connection);
+            statement = createAndBindSelectPreparedStatement(selectSql, orderByClause, Collections.emptyList(), query, connection);
             return statement.executeQuery();
         }catch(Exception e){
             DBUtils.closeQuietly(statement);

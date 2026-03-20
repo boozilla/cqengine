@@ -153,9 +153,7 @@ public class CompoundAttribute<O> implements Attribute<O, CompoundValueTuple<O>>
 
         CompoundAttribute that = (CompoundAttribute) o;
 
-        if (!attributes.equals(that.attributes)) return false;
-
-        return true;
+        return attributes.equals(that.attributes);
     }
 
     @Override

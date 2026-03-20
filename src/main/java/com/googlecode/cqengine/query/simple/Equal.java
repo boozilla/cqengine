@@ -69,9 +69,7 @@ public class Equal<O, A> extends SimpleQuery<O, A> {
         Equal equal = (Equal) o;
 
         if (!attribute.equals(equal.attribute)) return false;
-        if (!value.equals(equal.value)) return false;
-
-        return true;
+        return value.equals(equal.value);
     }
 
     @Override

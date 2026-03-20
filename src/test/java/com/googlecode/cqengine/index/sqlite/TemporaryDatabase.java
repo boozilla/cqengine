@@ -47,7 +47,7 @@ public class TemporaryDatabase {
     // Helper classes & methods
     // ----------------------
 
-    public static interface ConnectionProxy extends Connection {
+    public interface ConnectionProxy extends Connection {
         Connection getTargetConnection();
     }
 

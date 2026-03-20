@@ -99,9 +99,7 @@ public class GreaterThan<O, A extends Comparable<A>> extends SimpleQuery<O, A> {
 
         if (!attribute.equals(that.attribute)) return false;
         if (valueInclusive != that.valueInclusive) return false;
-        if (!value.equals(that.value)) return false;
-
-        return true;
+        return value.equals(that.value);
     }
 
     @Override

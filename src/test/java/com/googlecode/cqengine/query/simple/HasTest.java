@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static com.googlecode.cqengine.query.QueryFactory.has;
 import static com.googlecode.cqengine.query.QueryFactory.not;
@@ -50,7 +51,7 @@ public class HasTest {
         // Add some objects to the collection...
         cars.add(new Car(1, "ford focus", "great condition, low mileage", Arrays.asList("spare tyre", "sunroof")));
         cars.add(new Car(2, null, "dirty and unreliable, flat tyre", Arrays.asList("spare tyre", "radio")));
-        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Arrays.asList("radio")));
+        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Collections.singletonList("radio")));
 
         Assert.assertEquals(cars.retrieve(has(NAME)).size(), 2);
         Assert.assertEquals(cars.retrieve(not(has(NAME))).size(), 1);

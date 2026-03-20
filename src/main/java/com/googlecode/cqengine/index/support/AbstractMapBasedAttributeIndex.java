@@ -232,7 +232,7 @@ public abstract class AbstractMapBasedAttributeIndex<A, O, MapType extends Concu
 
 
     protected Integer getCountOfDistinctKeys(QueryOptions queryOptions){
-        return this.indexMap.keySet().size();
+        return this.indexMap.size();
     }
 
     public CloseableIterable<KeyStatistics<A>> getStatisticsForDistinctKeys(QueryOptions queryOptions){

@@ -56,7 +56,7 @@ public abstract class SimplifiedSQLiteIndex<A extends Comparable<A>, O, K extend
 
     @Override
     public void init(ObjectStore<O> objectStore, QueryOptions queryOptions) {
-        Persistence<O, K> persistence = SimplifiedSQLiteIndex.<O, K>getPersistenceFromQueryOptions(queryOptions);
+        Persistence<O, K> persistence = SimplifiedSQLiteIndex.getPersistenceFromQueryOptions(queryOptions);
         QueryEngine<O> queryEngine = getQueryEngineFromQueryOptions(queryOptions);
 
         final SimpleAttribute<O, K> primaryKeyAttribute = getPrimaryKeyFromPersistence(persistence);
@@ -248,9 +248,7 @@ public abstract class SimplifiedSQLiteIndex<A extends Comparable<A>, O, K extend
 
         SimplifiedSQLiteIndex that = (SimplifiedSQLiteIndex) o;
 
-        if (!attribute.equals(that.attribute)) return false;
-
-        return true;
+        return attribute.equals(that.attribute);
     }
 
     @Override

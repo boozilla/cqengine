@@ -54,24 +54,24 @@ public class CarFactory {
     public static Car createCar(int carId) {
         switch (carId % 10) {
             case 0: return new Car(carId, "Ford",   "Focus",   Car.Color.RED,   5, 5000.00, noFeatures(), noKeywords());
-            case 1: return new Car(carId, "Ford",   "Fusion",  Car.Color.RED,   4, 3999.99, asList("hybrid"), asList("zulu"));
-            case 2: return new Car(carId, "Ford",   "Taurus",  Car.Color.GREEN, 4, 6000.00, asList("grade a"), asList("alpha"));
-            case 3: return new Car(carId, "Honda",  "Civic",   Car.Color.WHITE, 5, 4000.00, asList("grade b"), asList("bravo"));
-            case 4: return new Car(carId, "Honda",  "Accord",  Car.Color.BLACK, 5, 3000.00, asList("grade c"), asList("very-good"));
-            case 5: return new Car(carId, "Honda",  "Insight", Car.Color.GREEN, 3, 5000.00, noFeatures(), asList("alpha"));
-            case 6: return new Car(carId, "Toyota", "Avensis", Car.Color.GREEN, 5, 5999.95, noFeatures(), asList("very-good-car"));
+            case 1: return new Car(carId, "Ford",   "Fusion",  Car.Color.RED,   4, 3999.99, Collections.singletonList("hybrid"), Collections.singletonList("zulu"));
+            case 2: return new Car(carId, "Ford",   "Taurus",  Car.Color.GREEN, 4, 6000.00, Collections.singletonList("grade a"), Collections.singletonList("alpha"));
+            case 3: return new Car(carId, "Honda",  "Civic",   Car.Color.WHITE, 5, 4000.00, Collections.singletonList("grade b"), Collections.singletonList("bravo"));
+            case 4: return new Car(carId, "Honda",  "Accord",  Car.Color.BLACK, 5, 3000.00, Collections.singletonList("grade c"), Collections.singletonList("very-good"));
+            case 5: return new Car(carId, "Honda",  "Insight", Car.Color.GREEN, 3, 5000.00, noFeatures(), Collections.singletonList("alpha"));
+            case 6: return new Car(carId, "Toyota", "Avensis", Car.Color.GREEN, 5, 5999.95, noFeatures(), Collections.singletonList("very-good-car"));
             case 7: return new Car(carId, "Toyota", "Prius",   Car.Color.BLUE,  3, 8500.00, asList("sunroof", "hybrid"), noKeywords());
-            case 8: return new Car(carId, "Toyota", "Hilux",   Car.Color.RED,   5, 7800.55, noFeatures(), asList("very-good-car"));
-            case 9: return new Car(carId, "BMW",    "M6",      Car.Color.BLUE,  2, 9000.23, asList("coupe"), asList("zulu"));
+            case 8: return new Car(carId, "Toyota", "Hilux",   Car.Color.RED,   5, 7800.55, noFeatures(), Collections.singletonList("very-good-car"));
+            case 9: return new Car(carId, "BMW",    "M6",      Car.Color.BLUE,  2, 9000.23, Collections.singletonList("coupe"), Collections.singletonList("zulu"));
             default: throw new IllegalStateException();
         }
     }
 
     static List<String> noFeatures() {
-        return Collections.<String>emptyList();
+        return Collections.emptyList();
     }
 
     static List<String> noKeywords() {
-        return Collections.<String>emptyList();
+        return Collections.emptyList();
     }
 }

@@ -65,7 +65,7 @@ public class DiskPersistenceTest {
         Assert.assertTrue("Bytes used when fully populated should be greater than zero: " + bytesUsedWhenFullyPopulated, bytesUsedWhenFullyPopulated > 0);
         cars.removeAll(CarFactory.createCollectionOfCars(100));
         long bytesUsedWhenObjectsRemoved = persistence.getBytesUsed();
-        Assert.assertTrue("Bytes used when objects removed (" + bytesUsedWhenObjectsRemoved + ") should remain the same as when fully populated (" + bytesUsedWhenFullyPopulated + ")", bytesUsedWhenObjectsRemoved == bytesUsedWhenFullyPopulated);
+        Assert.assertEquals("Bytes used when objects removed (" + bytesUsedWhenObjectsRemoved + ") should remain the same as when fully populated (" + bytesUsedWhenFullyPopulated + ")", bytesUsedWhenObjectsRemoved, bytesUsedWhenFullyPopulated);
         persistence.compact(); // Truncates size of the database, but not to zero as the tables which were created remain (although empty)
         long bytesUsedAfterCompaction = persistence.getBytesUsed();
         Assert.assertTrue("Bytes used after compaction (" + bytesUsedAfterCompaction + ") should be less than when fully populated (" + bytesUsedWhenFullyPopulated + ")", bytesUsedAfterCompaction < bytesUsedWhenFullyPopulated);
@@ -87,7 +87,7 @@ public class DiskPersistenceTest {
         Assert.assertTrue("Bytes used after expanding (" + bytesUsedAfterExpanding + ") should have been increased by at least bytes to expand (" + bytesToExpand + ") above initial bytes used (" + initialBytesUsed + ")", bytesUsedAfterExpanding >= (initialBytesUsed + bytesToExpand));
         persistence.compact();
         long bytesUsedAfterCompaction = persistence.getBytesUsed();
-        Assert.assertTrue("Bytes used after compaction (" + bytesUsedAfterCompaction + ") should be equal to initial bytes used (" + initialBytesUsed + ")", bytesUsedAfterCompaction == initialBytesUsed);
+        Assert.assertEquals("Bytes used after compaction (" + bytesUsedAfterCompaction + ") should be equal to initial bytes used (" + initialBytesUsed + ")", bytesUsedAfterCompaction, initialBytesUsed);
         Assert.assertTrue("Failed to delete temp file:" + persistence.getFile(), persistence.getFile().delete());
     }
 

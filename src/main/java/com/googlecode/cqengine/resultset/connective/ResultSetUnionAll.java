@@ -46,7 +46,7 @@ public class ResultSetUnionAll<O> extends ResultSet<O> {
     @Override
     public Iterator<O> iterator() {
         return new ConcatenatingIterator<O>() {
-            Iterator<? extends ResultSet<O>> resultSetsIterator = resultSets.iterator();
+            final Iterator<? extends ResultSet<O>> resultSetsIterator = resultSets.iterator();
             @Override
             public Iterator<O> getNextIterator() {
                 return resultSetsIterator.hasNext() ? resultSetsIterator.next().iterator() : null;

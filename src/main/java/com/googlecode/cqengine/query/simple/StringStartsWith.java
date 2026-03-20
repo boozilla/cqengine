@@ -81,9 +81,7 @@ public class StringStartsWith<O, A extends CharSequence> extends SimpleQuery<O, 
         StringStartsWith that = (StringStartsWith) o;
 
         if (!attribute.equals(that.attribute)) return false;
-        if (!value.equals(that.value)) return false;
-
-        return true;
+        return value.equals(that.value);
     }
 
     @Override

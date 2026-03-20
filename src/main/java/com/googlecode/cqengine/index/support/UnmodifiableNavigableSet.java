@@ -78,7 +78,7 @@ public class UnmodifiableNavigableSet<E> implements NavigableSet<E> {
     @Override
     public Iterator<E> descendingIterator() {
         return new UnmodifiableIterator<E>() {
-            Iterator<E> i = delegate.descendingIterator();
+            final Iterator<E> i = delegate.descendingIterator();
             @Override
             public boolean hasNext() {
                 return i.hasNext();
@@ -113,7 +113,7 @@ public class UnmodifiableNavigableSet<E> implements NavigableSet<E> {
     @Override
     public Iterator<E> iterator() {
         return new UnmodifiableIterator<E>() {
-            Iterator<E> i = delegate.iterator();
+            final Iterator<E> i = delegate.iterator();
             @Override
             public boolean hasNext() {
                 return i.hasNext();

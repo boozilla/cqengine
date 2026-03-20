@@ -159,10 +159,10 @@ public class PersistenceIndexingBenchmark {
         for (Car next : CarFactory.createIterableOfCars(total)) {
             if (!batch.offer(next)) {
                 if (BULK_IMPORT_FLAG) {
-                    collection.update(Collections.<Car>emptySet(), batch, QueryFactory.queryOptions(enableFlags(SQLiteIndexFlags.BULK_IMPORT)));
+                    collection.update(Collections.emptySet(), batch, QueryFactory.queryOptions(enableFlags(SQLiteIndexFlags.BULK_IMPORT)));
                 }
                 else {
-                    collection.update(Collections.<Car>emptySet(), batch);
+                    collection.update(Collections.emptySet(), batch);
                 }
                 count += batchSize;
                 batch.clear();

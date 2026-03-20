@@ -221,7 +221,7 @@ public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBased
             @Override
             public Iterator<O> iterator() {
                 ResultSet<O> rs = indexMap.get(getQuantizedValue(equal.getValue()));
-                return rs == null ? Collections.<O>emptySet().iterator() : filterForQuantization(rs, equal, queryOptions).iterator();
+                return rs == null ? Collections.emptyIterator() : filterForQuantization(rs, equal, queryOptions).iterator();
             }
             @Override
             public boolean contains(O object) {
@@ -556,7 +556,7 @@ public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBased
                     @Override
                     public Iterator<ResultSet<O>> iterator() {
                         return new UnmodifiableIterator<ResultSet<O>>() {
-                            Iterator<? extends ResultSet<O>> resultSetsIterator = resultSets.iterator();
+                            final Iterator<? extends ResultSet<O>> resultSetsIterator = resultSets.iterator();
                             boolean firstResultSet = true;
 
                             @Override
@@ -623,7 +623,7 @@ public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBased
     public static class DefaultValueSetFactory<O> implements Factory<StoredResultSet<O>> {
         @Override
         public StoredResultSet<O> create() {
-            return new StoredSetBasedResultSet<O>(Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
+            return new StoredSetBasedResultSet<O>(Collections.newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
         }
     }
 }

@@ -87,7 +87,7 @@ public class UnmodifiableNavigableSetTest extends TestCase {
         } catch (UnsupportedOperationException expected) {
         }
         try {
-            reverse.addAll(Collections.singleton(4));
+            reverse.add(4);
             fail("UnsupportedOperationException expected");
         } catch (UnsupportedOperationException expected) {
         }
@@ -111,7 +111,7 @@ public class UnmodifiableNavigableSetTest extends TestCase {
         } catch (UnsupportedOperationException expected) {
         }
         try {
-            unmod.addAll(Collections.singleton(4));
+            unmod.add(4);
             fail("UnsupportedOperationException expected");
         } catch (UnsupportedOperationException expected) {
         }
@@ -137,7 +137,7 @@ public class UnmodifiableNavigableSetTest extends TestCase {
         } catch (UnsupportedOperationException expected) {
         }
         try {
-            unmod.addAll(Collections.singleton(4));
+            unmod.add(4);
             fail("UnsupportedOperationException expected");
         } catch (UnsupportedOperationException expected) {
         }

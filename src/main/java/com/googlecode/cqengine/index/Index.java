@@ -31,7 +31,7 @@ public interface Index<O> extends ModificationListener<O> {
      * @return True if objects can be added to or removed from the index after the index has been built, false if
      * the index cannot be modified after it is built
      */
-    public boolean isMutable();
+    boolean isMutable();
 
     /**
      * Indicates if the index can perform retrievals for the type of query supplied.
@@ -42,13 +42,13 @@ public interface Index<O> extends ModificationListener<O> {
      * @return True if the index can perform retrievals for the type of query supplied, false if it does not
      * support this type of query
      */
-    public boolean supportsQuery(Query<O> query, QueryOptions queryOptions);
+    boolean supportsQuery(Query<O> query, QueryOptions queryOptions);
 
     /**
      * Indicates if the index is quantized, using a {@link com.googlecode.cqengine.quantizer.Quantizer}.
      * @return True if the index is quantized, false if not.
      */
-    public boolean isQuantized();
+    boolean isQuantized();
 
     /**
      * Returns a {@link ResultSet} which when iterated will return objects from the index matching the query
@@ -64,7 +64,7 @@ public interface Index<O> extends ModificationListener<O> {
      * @throws IllegalArgumentException if the index does not support the given query
      * @see #supportsQuery(Query, QueryOptions)
      */
-    public ResultSet<O> retrieve(Query<O> query, QueryOptions queryOptions);
+    ResultSet<O> retrieve(Query<O> query, QueryOptions queryOptions);
 
     /**
      * Returns the effective index, which Persistence objects will use to determine the identity of the index making
@@ -75,6 +75,6 @@ public interface Index<O> extends ModificationListener<O> {
      *
      * @return The effective index, in the case that this index is wrapped by another index.
      */
-    public Index<O> getEffectiveIndex();
+    Index<O> getEffectiveIndex();
 
 }

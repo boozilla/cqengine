@@ -31,7 +31,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      * @param queryOptions Optional parameters for the query
      */
     @Override
-    public CloseableIterable<A> getDistinctKeys(QueryOptions queryOptions);
+    CloseableIterable<A> getDistinctKeys(QueryOptions queryOptions);
 
     /**
      * Returns distinct keys within an optional range from the index, in ascending order.
@@ -43,14 +43,14 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      * @param queryOptions Optional parameters for the query
      * @return The distinct keys in the index within the given bounds, in ascending order
      */
-    public CloseableIterable<A> getDistinctKeys(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
+    CloseableIterable<A> getDistinctKeys(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
 
     /**
      * Returns the distinct keys in the index, in descending order.
      * @return The distinct keys in the index, in descending order
      * @param queryOptions Optional parameters for the query
      */
-    public CloseableIterable<A> getDistinctKeysDescending(QueryOptions queryOptions);
+    CloseableIterable<A> getDistinctKeysDescending(QueryOptions queryOptions);
 
     /**
      * Returns distinct keys within an optional range from the index, in descending order.
@@ -62,7 +62,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      * @param queryOptions Optional parameters for the query
      * @return The distinct keys in the index within the given bounds, in descending order
      */
-    public CloseableIterable<A> getDistinctKeysDescending(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
+    CloseableIterable<A> getDistinctKeysDescending(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
 
     /**
      * Returns the statistics {@link KeyStatistics} for all distinct keys in the index,  in descending order
@@ -70,7 +70,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      * @param queryOptions Optional parameters for the query
      * @return The statistics {@link KeyStatistics} for all distinct keys in the index,  in descending order
      */
-    public CloseableIterable<KeyStatistics<A>> getStatisticsForDistinctKeysDescending(QueryOptions queryOptions);
+    CloseableIterable<KeyStatistics<A>> getStatisticsForDistinctKeysDescending(QueryOptions queryOptions);
 
     /**
      * Returns the keys and corresponding values for those keys in the index. Note the same key
@@ -81,7 +81,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      *
      * @param queryOptions Optional parameters for the query
      */
-    public CloseableIterable<KeyValue<A, O>> getKeysAndValues(QueryOptions queryOptions);
+    CloseableIterable<KeyValue<A, O>> getKeysAndValues(QueryOptions queryOptions);
 
     /**
      * Returns the keys within an optional range and corresponding values for those keys in the index. Note the same key
@@ -96,7 +96,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      *
      * @return The keys and corresponding values for those keys in the index, in ascending order of key
      */
-    public CloseableIterable<KeyValue<A, O>> getKeysAndValues(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
+    CloseableIterable<KeyValue<A, O>> getKeysAndValues(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
 
     /**
      * Returns the keys and corresponding values for those keys in the index. Note the same key
@@ -107,7 +107,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      *
      * @param queryOptions Optional parameters for the query
      */
-    public CloseableIterable<KeyValue<A, O>> getKeysAndValuesDescending(QueryOptions queryOptions);
+    CloseableIterable<KeyValue<A, O>> getKeysAndValuesDescending(QueryOptions queryOptions);
 
     /**
      * Returns the keys within an optional range and corresponding values for those keys in the index. Note the same key
@@ -122,7 +122,7 @@ public interface SortedKeyStatisticsIndex<A extends Comparable<A>, O> extends Ke
      *
      * @return The keys and corresponding values for those keys in the index, in descending order of key
      */
-    public CloseableIterable<KeyValue<A, O>> getKeysAndValuesDescending(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
+    CloseableIterable<KeyValue<A, O>> getKeysAndValuesDescending(A lowerBound, boolean lowerInclusive, A upperBound, boolean upperInclusive, QueryOptions queryOptions);
 
 
 }

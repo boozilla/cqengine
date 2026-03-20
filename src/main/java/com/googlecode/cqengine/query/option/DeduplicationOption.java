@@ -68,9 +68,7 @@ public class DeduplicationOption {
 
         DeduplicationOption that = (DeduplicationOption) o;
 
-        if (strategy != that.strategy) return false;
-
-        return true;
+        return strategy == that.strategy;
     }
 
     @Override

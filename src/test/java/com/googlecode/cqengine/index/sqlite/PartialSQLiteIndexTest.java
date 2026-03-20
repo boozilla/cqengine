@@ -53,7 +53,7 @@ public class PartialSQLiteIndexTest {
         queryOptions.put(ConnectionManager.class, connectionManager);
         PartialSQLiteIndex<String, Car, Integer> index = PartialSQLiteIndex.onAttributeWithFilterQuery(Car.MANUFACTURER, OBJECT_TO_ID, ID_TO_OBJECT, between(Car.CAR_ID, 2, 4));
         indexedCollection.addIndex(index, queryOptions);
-        indexedCollection.update(Collections.<Car>emptySet(), CarFactory.createCollectionOfCars(10), queryOptions);
+        indexedCollection.update(Collections.emptySet(), CarFactory.createCollectionOfCars(10), queryOptions);
 
         assertEquals(75,         indexedCollection.retrieve(and(equal(Car.MANUFACTURER, "Ford"), between(Car.CAR_ID, 2, 4)), queryOptions).getRetrievalCost());
         assertEquals(2147483647, indexedCollection.retrieve(and(equal(Car.MANUFACTURER, "Ford"), between(Car.CAR_ID, 2, 5)), queryOptions).getRetrievalCost());

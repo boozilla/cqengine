@@ -62,11 +62,11 @@ public class RegularMapTest {
         cars.addIndex(InvertedRadixTreeIndex.onAttribute(MODEL));
         cars.addIndex(SuffixTreeIndex.onAttribute(MODEL));
 
-        cars.add(buildNewCar(1, "Ford",   "Focus",  Car.Color.BLUE,  5, 9000.50, Collections.<String>emptyList()));
-        cars.add(buildNewCar(2, "Ford",   "Fiesta", Car.Color.BLUE,  2, 5000.00, Collections.<String>emptyList()));
-        cars.add(buildNewCar(3, "Ford",   "F-150",  Car.Color.RED,   2, 9500.00, Collections.<String>emptyList()));
-        cars.add(buildNewCar(4, "Honda",  "Civic",  Car.Color.RED,   5, 5000.00, Collections.<String>emptyList()));
-        cars.add(buildNewCar(5, "Toyota", "Prius",  Car.Color.BLACK, 3, 9700.00, Collections.<String>emptyList()));
+        cars.add(buildNewCar(1, "Ford",   "Focus",  Car.Color.BLUE,  5, 9000.50, Collections.emptyList()));
+        cars.add(buildNewCar(2, "Ford",   "Fiesta", Car.Color.BLUE,  2, 5000.00, Collections.emptyList()));
+        cars.add(buildNewCar(3, "Ford",   "F-150",  Car.Color.RED,   2, 9500.00, Collections.emptyList()));
+        cars.add(buildNewCar(4, "Honda",  "Civic",  Car.Color.RED,   5, 5000.00, Collections.emptyList()));
+        cars.add(buildNewCar(5, "Toyota", "Prius",  Car.Color.BLACK, 3, 9700.00, Collections.emptyList()));
 
         // Ford cars...
         assertThat(carIdsIn(cars.retrieve(equal(MANUFACTURER, "Ford"))), is(setOf(1, 2, 3)));

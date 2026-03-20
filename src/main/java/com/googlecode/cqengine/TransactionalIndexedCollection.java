@@ -117,7 +117,7 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
         super(persistence);
         this.objectType = objectType;
         // Set up initial version...
-        this.currentVersion = new Version(Collections.<O>emptySet());
+        this.currentVersion = new Version(Collections.emptySet());
     }
 
     /**
@@ -246,25 +246,25 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
 
     @Override
     public boolean add(O o) {
-        return update(Collections.<O>emptySet(), Collections.singleton(o));
+        return update(Collections.emptySet(), Collections.singleton(o));
     }
 
     @Override
     @SuppressWarnings({"unchecked"})
     public boolean remove(Object object) {
-        return update(Collections.singleton((O) object), Collections.<O>emptySet());
+        return update(Collections.singleton((O) object), Collections.emptySet());
     }
 
     @Override
     @SuppressWarnings({"unchecked"})
     public boolean addAll(Collection<? extends O> c) {
-        return update(Collections.<O>emptySet(), (Collection<O>) c);
+        return update(Collections.emptySet(), (Collection<O>) c);
     }
 
     @Override
     @SuppressWarnings({"unchecked"})
     public boolean removeAll(Collection<?> c) {
-        return update((Collection<O>) c, Collections.<O>emptySet());
+        return update((Collection<O>) c, Collections.emptySet());
     }
 
     @Override
@@ -303,7 +303,7 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
 
                 // Finally, remove the exclusion,
                 // then wait for this to take effect across all threads...
-                incrementVersion(Collections.<O>emptySet());
+                incrementVersion(Collections.emptySet());
 
                 return modified;
             }
@@ -358,7 +358,7 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
                     @Override
                     public boolean isValid(O object, QueryOptions queryOptions) {
                         @SuppressWarnings("unchecked")
-                        Iterable<O> objectsToExclude = (Iterable<O>) thisVersion.objectsToExclude;
+                        Iterable<O> objectsToExclude = thisVersion.objectsToExclude;
                         return !iterableContains(objectsToExclude, object);
                     }
                 };
@@ -440,7 +440,7 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
 
         // Finally, remove the exclusion,
         // and then wait for this to take effect across all threads...
-        incrementVersion(Collections.<O>emptySet());
+        incrementVersion(Collections.emptySet());
 
         return modified;
     }
@@ -464,7 +464,7 @@ public class TransactionalIndexedCollection<O> extends ConcurrentIndexedCollecti
 
     Version incrementVersionWithWriteBarrier() {
         final Version previousVersion = this.currentVersion;
-        final Version barrierVersion = new Version(Collections.<O>emptySet());
+        final Version barrierVersion = new Version(Collections.emptySet());
         barrierVersion.lock.writeLock().lock();
         this.currentVersion = barrierVersion;
         previousVersion.lock.writeLock().lock();

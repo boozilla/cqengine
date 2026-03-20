@@ -94,9 +94,7 @@ public abstract class AbstractAttribute<O, A> implements Attribute<O, A> {
         if (!that.canEqual(this)) return false;
         if (!attributeName.equals(that.attributeName)) return false;
         if (!attributeType.equals(that.attributeType)) return false;
-        if (!objectType.equals(that.objectType)) return false;
-
-        return true;
+        return objectType.equals(that.objectType);
     }
 
     public boolean canEqual(Object other) {

@@ -1285,7 +1285,7 @@ public class IndexedCollectionFunctionalTest {
                     name = "index ordering strategy selection - negative";
                     dataSet = SMALL_DATASET;
                     collectionImplementations = classes(ConcurrentIndexedCollection.class);
-                    queriesToEvaluate = asList(
+                    queriesToEvaluate = singletonList(
                             // Try to force use of the index ordering strategy (set selectivity threshold = 1.0),
                             // however it will not actually be used...
                             new QueryToEvaluate() {{
@@ -1535,7 +1535,7 @@ public class IndexedCollectionFunctionalTest {
                                 indexCombination = currentIndexCombination;
                                 highPriority = currentQueryToEvaluate.highPriority;
                             }};
-                            scenarios.add(Collections.<Object>singletonList(scenario));
+                            scenarios.add(Collections.singletonList(scenario));
                             if (macroScenario.alsoEvaluateWithIndexMergeStrategy) {
                                 Scenario scenarioWithIndexMergeStrategy = new Scenario() {{
                                     name = macroScenario.name;
@@ -1554,7 +1554,7 @@ public class IndexedCollectionFunctionalTest {
                                     highPriority = currentQueryToEvaluate.highPriority;
                                     useIndexMergeStrategy = true;
                                 }};
-                                scenarios.add(Collections.<Object>singletonList(scenarioWithIndexMergeStrategy));
+                                scenarios.add(Collections.singletonList(scenarioWithIndexMergeStrategy));
                             }
                         }
                     }
@@ -1707,10 +1707,8 @@ public class IndexedCollectionFunctionalTest {
         if (persistence != null && !(persistence instanceof OnHeapPersistence)) {
             // Persistence is non-heap therefore has a primary key index already.
             if (indexToBeAdded instanceof AttributeIndex) {
-                if (Car.CAR_ID.equals(((AttributeIndex) indexToBeAdded).getAttribute())) {
-                    // Collection will already have an identity index on this attribute...
-                    return true;
-                }
+                // Collection will already have an identity index on this attribute...
+                return Car.CAR_ID.equals(((AttributeIndex) indexToBeAdded).getAttribute());
             }
         }
         return false;
@@ -1752,9 +1750,7 @@ public class IndexedCollectionFunctionalTest {
                     // Validate actual results returned by ResultSet.iterator()...
                     Set<Integer> expectedCarIds = new HashSet<Integer>(expectedResults.containsCarIds);
                     for (Car car : results) {
-                        if (expectedCarIds.contains(car.getCarId())) {
-                            expectedCarIds.remove(car.getCarId());
-                        }
+                        expectedCarIds.remove(car.getCarId());
                         if (expectedCarIds.isEmpty()) {
                             break;
                         }
@@ -1889,7 +1885,7 @@ public class IndexedCollectionFunctionalTest {
 
     @SuppressWarnings("unchecked")
     static List<Class> classes(Class<?>... indexedCollectionClasses) {
-        return Arrays.<Class>asList(indexedCollectionClasses);
+        return Arrays.asList(indexedCollectionClasses);
 
     }
 
@@ -1902,7 +1898,7 @@ public class IndexedCollectionFunctionalTest {
 
     @SuppressWarnings("unchecked")
     static Iterable<Iterable<Index>> indexCombinations(Iterable... indexSets) {
-        return Arrays.<Iterable<Index>>asList(indexSets);
+        return Arrays.asList(indexSets);
     }
 
     static String getIndexDescriptions(Iterable<Index> indexes) {

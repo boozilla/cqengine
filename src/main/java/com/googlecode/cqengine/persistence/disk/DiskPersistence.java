@@ -185,7 +185,7 @@ public class DiskPersistence<O, A extends Comparable<A>> implements SQLitePersis
 
     protected Connection getConnectionWithoutRWLock(Index<?> index, QueryOptions queryOptions) {
         if (closed) {
-            throw new IllegalStateException("DiskPersistence has been closed: " + this.toString());
+            throw new IllegalStateException("DiskPersistence has been closed: " + this);
         }
         try {
             return sqLiteDataSource.getConnection();

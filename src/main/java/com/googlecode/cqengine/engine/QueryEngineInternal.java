@@ -26,6 +26,6 @@ public interface QueryEngineInternal<O> extends QueryEngine<O>, ModificationList
      *
      * @return True if all indexes are mutable, false if any indexes are not mutable
      */
-    public boolean isMutable();
+    boolean isMutable();
 
 }

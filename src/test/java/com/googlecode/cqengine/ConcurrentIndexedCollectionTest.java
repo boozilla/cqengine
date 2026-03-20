@@ -85,44 +85,44 @@ public class ConcurrentIndexedCollectionTest extends TestCase {
 
     public void testUpdate() {
         IndexedCollection<String> indexedCollection = new ConcurrentIndexedCollection<String>();
-        Assert.assertTrue(indexedCollection.update(Collections.<String>emptyList(), asList("a", "b", "c")));
+        Assert.assertTrue(indexedCollection.update(Collections.emptyList(), asList("a", "b", "c")));
 
         Assert.assertEquals(setOf("a", "b", "c"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asList("b"), Collections.<String>emptyList()));
+        Assert.assertTrue(indexedCollection.update(Collections.singletonList("b"), Collections.emptyList()));
         Assert.assertEquals(setOf("a", "c"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asList("a"), asList("d")));
+        Assert.assertTrue(indexedCollection.update(Collections.singletonList("a"), Collections.singletonList("d")));
         Assert.assertEquals(setOf("c", "d"), indexedCollection);
 
-        Assert.assertFalse(indexedCollection.update(asList("a"), Collections.<String>emptyList()));
+        Assert.assertFalse(indexedCollection.update(Collections.singletonList("a"), Collections.emptyList()));
         Assert.assertEquals(setOf("c", "d"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asList("c", "e"), Collections.<String>emptyList()));
+        Assert.assertTrue(indexedCollection.update(asList("c", "e"), Collections.emptyList()));
         Assert.assertEquals(setOf("d"), indexedCollection);
     }
 
     public void testUpdate_IterableArguments() {
         IndexedCollection<String> indexedCollection = new ConcurrentIndexedCollection<String>();
-        Assert.assertTrue(indexedCollection.update(asIterable(Collections.<String>emptyList()), asIterable(asList("a", "b", "c"))));
+        Assert.assertTrue(indexedCollection.update(asIterable(Collections.emptyList()), asIterable(asList("a", "b", "c"))));
         Assert.assertEquals(setOf("a", "b", "c"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asIterable(asList("b")), asIterable(Collections.<String>emptyList())));
+        Assert.assertTrue(indexedCollection.update(asIterable(Collections.singletonList("b")), asIterable(Collections.emptyList())));
         Assert.assertEquals(setOf("a", "c"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asIterable(asList("a")), asIterable(asList("d"))));
+        Assert.assertTrue(indexedCollection.update(asIterable(Collections.singletonList("a")), asIterable(Collections.singletonList("d"))));
         Assert.assertEquals(setOf("c", "d"), indexedCollection);
 
-        Assert.assertFalse(indexedCollection.update(asIterable(asList("a")), asIterable(Collections.<String>emptyList())));
+        Assert.assertFalse(indexedCollection.update(asIterable(Collections.singletonList("a")), asIterable(Collections.emptyList())));
         Assert.assertEquals(setOf("c", "d"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asIterable(asList("c", "e")), asIterable(Collections.<String>emptyList())));
+        Assert.assertTrue(indexedCollection.update(asIterable(asList("c", "e")), asIterable(Collections.emptyList())));
         Assert.assertEquals(setOf("d"), indexedCollection);
 
-        Assert.assertTrue(indexedCollection.update(asIterable(Collections.<String>emptyList()), asIterable(asList("e", "d"))));
+        Assert.assertTrue(indexedCollection.update(asIterable(Collections.emptyList()), asIterable(asList("e", "d"))));
         Assert.assertEquals(setOf("d", "e"), indexedCollection);
 
-        Assert.assertFalse(indexedCollection.update(asIterable(Collections.<String>emptyList()), asIterable(asList("e", "d"))));
+        Assert.assertFalse(indexedCollection.update(asIterable(Collections.emptyList()), asIterable(asList("e", "d"))));
         Assert.assertEquals(setOf("d", "e"), indexedCollection);
     }
 

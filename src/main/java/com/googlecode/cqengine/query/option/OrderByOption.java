@@ -62,9 +62,7 @@ public class OrderByOption<O> {
 
         OrderByOption that = (OrderByOption) o;
 
-        if (!attributeOrders.equals(that.attributeOrders)) return false;
-
-        return true;
+        return attributeOrders.equals(that.attributeOrders);
     }
 
     @Override

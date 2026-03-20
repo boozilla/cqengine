@@ -21,5 +21,5 @@ package com.googlecode.cqengine.index.support;
 public interface CloseableIterable<T> extends Iterable<T> {
 
     @Override
-    abstract CloseableIterator<T> iterator();
+    CloseableIterator<T> iterator();
 }

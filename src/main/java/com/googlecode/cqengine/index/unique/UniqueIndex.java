@@ -203,7 +203,7 @@ public class UniqueIndex<A,O> extends AbstractAttributeIndex<A,O> implements OnH
             }
             @Override
             public boolean contains(O object) {
-                return (object != null && obj != null && object.equals(obj));
+                return (object != null && object.equals(obj));
             }
             @Override
             public boolean matches(O object) {

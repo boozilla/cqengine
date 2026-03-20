@@ -121,28 +121,28 @@ public class AttributeBytecodeGeneratorTest {
     public void testGenerateSimpleAttributeForField() throws Exception {
         Class<? extends SimpleAttribute<PojoWithField, String>> attributeClass = generateSimpleAttributeForField(PojoWithField.class, String.class, "foo", "foo");
         SimpleAttribute<PojoWithField, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, PojoWithField.class, String.class, "foo", new PojoWithField(), asList("bar"));
+        validateAttribute(attribute, PojoWithField.class, String.class, "foo", new PojoWithField(), Collections.singletonList("bar"));
     }
 
     @Test
     public void testGenerateSimpleAttributeForField_PrimitiveField() throws Exception {
         Class<? extends SimpleAttribute<PojoWithPrimitiveField, Integer>> attributeClass = generateSimpleAttributeForField(PojoWithPrimitiveField.class, Integer.class, "foo", "foo");
         SimpleAttribute<PojoWithPrimitiveField, Integer> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, PojoWithPrimitiveField.class, Integer.class, "foo", new PojoWithPrimitiveField(), asList(5));
+        validateAttribute(attribute, PojoWithPrimitiveField.class, Integer.class, "foo", new PojoWithPrimitiveField(), Collections.singletonList(5));
     }
 
     @Test
     public void testGenerateSimpleAttributeForGetterMethod() throws Exception {
         Class<? extends SimpleAttribute<PojoWithGetter, String>> attributeClass = generateSimpleAttributeForGetter(PojoWithGetter.class, String.class, "getFoo", "foo");
         SimpleAttribute<PojoWithGetter, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, PojoWithGetter.class, String.class, "foo", new PojoWithGetter(), asList("bar"));
+        validateAttribute(attribute, PojoWithGetter.class, String.class, "foo", new PojoWithGetter(), Collections.singletonList("bar"));
     }
 
     @Test
     public void testGenerateSimpleAttributeForParameterizedGetterMethod() throws Exception {
         Class<? extends SimpleAttribute<PojoWithParameterizedGetter, String>> attributeClass = generateSimpleAttributeForParameterizedGetter(PojoWithParameterizedGetter.class, String.class, "getFoo", "baz", "foo");
         SimpleAttribute<PojoWithParameterizedGetter, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, PojoWithParameterizedGetter.class, String.class, "foo", new PojoWithParameterizedGetter(), asList("bar_baz"));
+        validateAttribute(attribute, PojoWithParameterizedGetter.class, String.class, "foo", new PojoWithParameterizedGetter(), Collections.singletonList("bar_baz"));
     }
 
     @Test(expected = IllegalStateException.class)
@@ -177,21 +177,21 @@ public class AttributeBytecodeGeneratorTest {
     public void testGenerateSimpleNullableAttributeForField() throws Exception {
         Class<? extends SimpleNullableAttribute<NullablePojoWithField, String>> attributeClass = generateSimpleNullableAttributeForField(NullablePojoWithField.class, String.class, "foo", "foo");
         SimpleNullableAttribute<NullablePojoWithField, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, NullablePojoWithField.class, String.class, "foo", new NullablePojoWithField(), Collections.<String>emptyList());
+        validateAttribute(attribute, NullablePojoWithField.class, String.class, "foo", new NullablePojoWithField(), Collections.emptyList());
     }
 
     @Test
     public void testGenerateSimpleNullableAttributeForGetter() throws Exception {
         Class<? extends SimpleNullableAttribute<NullablePojoWithGetter, String>> attributeClass = generateSimpleNullableAttributeForGetter(NullablePojoWithGetter.class, String.class, "getFoo", "foo");
         SimpleNullableAttribute<NullablePojoWithGetter, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, NullablePojoWithGetter.class, String.class, "foo", new NullablePojoWithGetter(), Collections.<String>emptyList());
+        validateAttribute(attribute, NullablePojoWithGetter.class, String.class, "foo", new NullablePojoWithGetter(), Collections.emptyList());
     }
 
     @Test
     public void testGenerateSimpleNullableAttributeForParameterizedGetter() throws Exception {
         Class<? extends SimpleNullableAttribute<NullablePojoWithParameterizedGetter, String>> attributeClass = generateSimpleNullableAttributeForParameterizedGetter(NullablePojoWithParameterizedGetter.class, String.class, "getFoo", "baz", "foo");
         SimpleNullableAttribute<NullablePojoWithParameterizedGetter, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, NullablePojoWithParameterizedGetter.class, String.class, "foo", new NullablePojoWithParameterizedGetter(), Collections.<String>emptyList());
+        validateAttribute(attribute, NullablePojoWithParameterizedGetter.class, String.class, "foo", new NullablePojoWithParameterizedGetter(), Collections.emptyList());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -293,21 +293,21 @@ public class AttributeBytecodeGeneratorTest {
     public void testGenerateMultiValueNullableAttributeForField() throws Exception {
         Class<? extends MultiValueNullableAttribute<NullablePojoWithMultiValueField, String>> attributeClass = generateMultiValueNullableAttributeForField(NullablePojoWithMultiValueField.class, String.class, "foo", true, "foo");
         MultiValueNullableAttribute<NullablePojoWithMultiValueField, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, NullablePojoWithMultiValueField.class, String.class, "foo", new NullablePojoWithMultiValueField(), Collections.<String>emptyList());
+        validateAttribute(attribute, NullablePojoWithMultiValueField.class, String.class, "foo", new NullablePojoWithMultiValueField(), Collections.emptyList());
     }
 
     @Test
     public void testGenerateMultiValueNullableAttributeForGetter() throws Exception {
         Class<? extends MultiValueNullableAttribute<NullablePojoWithMultiValueGetter, String>> attributeClass = generateMultiValueNullableAttributeForGetter(NullablePojoWithMultiValueGetter.class, String.class, "getFoo", true, "foo");
         MultiValueNullableAttribute<NullablePojoWithMultiValueGetter, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, NullablePojoWithMultiValueGetter.class, String.class, "foo", new NullablePojoWithMultiValueGetter(), Collections.<String>emptyList());
+        validateAttribute(attribute, NullablePojoWithMultiValueGetter.class, String.class, "foo", new NullablePojoWithMultiValueGetter(), Collections.emptyList());
     }
 
     @Test
     public void testGenerateMultiValueNullableAttributeForParameterizedGetter() throws Exception {
         Class<? extends MultiValueNullableAttribute<NullablePojoWithMultiValueParameterizedGetter, String>> attributeClass = generateMultiValueNullableAttributeForParameterizedGetter(NullablePojoWithMultiValueParameterizedGetter.class, String.class, "getFoo", "baz", true, "foo");
         MultiValueNullableAttribute<NullablePojoWithMultiValueParameterizedGetter, String> attribute = attributeClass.newInstance();
-        validateAttribute(attribute, NullablePojoWithMultiValueParameterizedGetter.class, String.class, "foo", new NullablePojoWithMultiValueParameterizedGetter(), Collections.<String>emptyList());
+        validateAttribute(attribute, NullablePojoWithMultiValueParameterizedGetter.class, String.class, "foo", new NullablePojoWithMultiValueParameterizedGetter(), Collections.emptyList());
     }
 
     @Test(expected = IllegalStateException.class)

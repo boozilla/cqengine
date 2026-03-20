@@ -352,12 +352,12 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         final Set<Index<O>> indexesOnAttribute = attributeIndexes.get(attribute);
         if (indexesOnAttribute == null || indexesOnAttribute.isEmpty()) {
             // If no index is registered for this attribute, return the fallback index...
-            return Collections.<Index<O>>singleton(this.fallbackIndex);
+            return Collections.singleton(this.fallbackIndex);
         }
         // Return an Iterable over the registered indexes and the fallback index...
         List<Iterable<Index<O>>> iterables = new ArrayList<Iterable<Index<O>>>(2);
         iterables.add(indexesOnAttribute);
-        iterables.add(Collections.<Index<O>>singleton(fallbackIndex));
+        iterables.add(Collections.singleton(fallbackIndex));
         return new ConcatenatingIterable<Index<O>>(iterables);
     }
 
@@ -964,7 +964,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
         final List<AttributeOrder<O>> sortOrdersForBucket = determineAdditionalSortOrdersForIndexOrdering(allSortOrders, attributeCanHaveMoreThanOneValue, indexForOrdering, queryOptions);
         final List<AttributeOrder<O>> effectiveSortOrdersForBucket = canReusePrimaryKeyOrderedIndexBuckets(indexForOrdering, sortOrdersForBucket, queryOptions)
-                ? Collections.<AttributeOrder<O>>emptyList()
+                ? Collections.emptyList()
                 : sortOrdersForBucket;
 
         final Iterator<O> sorted;
@@ -1019,7 +1019,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         @SuppressWarnings("unchecked")
         final PrimaryKeyOrderedAttributeIndex<O> primaryKeyOrderedIndex = (PrimaryKeyOrderedAttributeIndex<O>) index;
         final Attribute<O, ? extends Comparable> primaryKeyAttribute = primaryKeyOrderedIndex.getPrimaryKeyAttributeForValueSets(queryOptions);
-        return primaryKeyAttribute != null && sortAttribute.equals(primaryKeyAttribute);
+        return sortAttribute.equals(primaryKeyAttribute);
     }
 
     Iterator<O> retrieveWithPrimaryOrderedBucketMaterialization(QueryOptions queryOptions, SortedKeyStatisticsIndex<?, O> indexForOrdering, List<AttributeOrder<O>> allSortOrders, boolean primarySortDescending, CloseableResourceGroup closeableResourceGroup) {
@@ -1213,7 +1213,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         boolean lowerInclusive = false, upperInclusive = false;
         List<SimpleQuery<O, ?>> candidateRangeQueries = Collections.emptyList();
         if (query instanceof SimpleQuery) {
-            candidateRangeQueries = Collections.<SimpleQuery<O, ?>>singletonList((SimpleQuery<O, ?>) query);
+            candidateRangeQueries = Collections.singletonList((SimpleQuery<O, ?>) query);
         }
         else if (query instanceof And) {
             And<O> and = (And<O>)query;
@@ -1328,7 +1328,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
                         boolean needToProcessSimpleQueries = and.hasSimpleQueries();
                         boolean needToProcessComparativeQueries = and.hasComparativeQueries();
-                        Iterator<LogicalQuery<O>> logicalQueriesIterator = and.getLogicalQueries().iterator();
+                        final Iterator<LogicalQuery<O>> logicalQueriesIterator = and.getLogicalQueries().iterator();
 
                         @Override
                         public boolean hasNext() {
@@ -1383,7 +1383,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
                         boolean needToProcessSimpleQueries = or.hasSimpleQueries();
                         boolean needToProcessComparativeQueries = or.hasComparativeQueries();
-                        Iterator<LogicalQuery<O>> logicalQueriesIterator = or.getLogicalQueries().iterator();
+                        final Iterator<LogicalQuery<O>> logicalQueriesIterator = or.getLogicalQueries().iterator();
 
                         @Override
                         public boolean hasNext() {
@@ -1554,7 +1554,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             public Iterator<ResultSet<O>> iterator() {
                 return new UnmodifiableIterator<ResultSet<O>>() {
 
-                    Iterator<SimpleQuery<O, ?>> queriesIterator = queries.iterator();
+                    final Iterator<SimpleQuery<O, ?>> queriesIterator = queries.iterator();
                     @Override
                     public boolean hasNext() {
                         return queriesIterator.hasNext();
@@ -1592,7 +1592,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             public Iterator<ResultSet<O>> iterator() {
                 return new UnmodifiableIterator<ResultSet<O>>() {
 
-                    Iterator<ComparativeQuery<O, ?>> queriesIterator = queries.iterator();
+                    final Iterator<ComparativeQuery<O, ?>> queriesIterator = queries.iterator();
                     @Override
                     public boolean hasNext() {
                         return queriesIterator.hasNext();

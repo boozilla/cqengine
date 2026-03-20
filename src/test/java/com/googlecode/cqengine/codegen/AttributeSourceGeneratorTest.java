@@ -44,8 +44,7 @@ public class AttributeSourceGeneratorTest {
 
     @Test
     public void testGenerateAttributesForPastingIntoTargetClass() {
-        String expected = "" +
-                "\n" +
+        String expected = "\n" +
                 "\n" +
                 "    /**\n" +
                 "     * CQEngine attribute for accessing field {@code Car.name}.\n" +
@@ -113,8 +112,7 @@ public class AttributeSourceGeneratorTest {
 
     @Test
     public void testGenerateSeparateAttributesClass() {
-        String expected = "" +
-                "package com.googlecode.cqengine.codegen;\n" +
+        String expected = "package com.googlecode.cqengine.codegen;\n" +
                 "\n" +
                 "import com.googlecode.cqengine.attribute.*;\n" +
                 "import com.googlecode.cqengine.query.option.QueryOptions;\n" +

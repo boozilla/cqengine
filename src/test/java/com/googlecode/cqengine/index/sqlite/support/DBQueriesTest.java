@@ -455,9 +455,9 @@ public class DBQueriesTest {
 
             Map<String, Integer> resultSetToMap = resultSetToMap(resultSet);
             assertEquals(3, resultSetToMap.size());
-            assertEquals(new Integer(2), resultSetToMap.get("abs"));
-            assertEquals(new Integer(1), resultSetToMap.get("airbags"));
-            assertEquals(new Integer(1), resultSetToMap.get("gps"));
+            assertEquals(Integer.valueOf(2), resultSetToMap.get("abs"));
+            assertEquals(Integer.valueOf(1), resultSetToMap.get("airbags"));
+            assertEquals(Integer.valueOf(1), resultSetToMap.get("gps"));
 
         }finally {
             DBUtils.closeQuietly(resultSet);

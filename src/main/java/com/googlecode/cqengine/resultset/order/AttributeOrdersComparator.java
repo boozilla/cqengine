@@ -291,12 +291,12 @@ public class AttributeOrdersComparator<O> implements Comparator<O> {
             this.descending = attributeOrder.isDescending();
             final Attribute<O, ? extends Comparable> attribute = attributeOrder.getAttribute();
             if (attribute instanceof OrderControlAttribute) {
-                this.orderControl = (OrderControlAttribute<O>) (OrderControlAttribute) attribute;
+                this.orderControl = (OrderControlAttribute<O>) attribute;
                 this.attribute = (Attribute<O, ? extends Comparable>) this.orderControl.getDelegateAttribute();
             }
             else {
                 this.orderControl = null;
-                this.attribute = (Attribute<O, Comparable>) attribute;
+                this.attribute = attribute;
             }
             this.simpleAttribute = this.attribute instanceof SimpleAttribute
                     ? (SimpleAttribute<O, ? extends Comparable>) this.attribute

@@ -42,7 +42,7 @@ public abstract class LookupResultSet<O> extends ResultSet<O> {
     @Override
     public Iterator<O> iterator() {
         final ResultSet<O> resultSet = lookupResultSet();
-        return resultSet == null ? Collections.<O>emptyList().iterator() : resultSet.iterator();
+        return resultSet == null ? Collections.emptyIterator() : resultSet.iterator();
     }
 
     @Override

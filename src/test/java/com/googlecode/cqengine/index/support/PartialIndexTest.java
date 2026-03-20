@@ -74,8 +74,8 @@ public class PartialIndexTest {
         assertEquals(between(Car.CAR_ID, 2, 5), partialIndex.getFilterQuery());
         assertFalse(partialIndex.isQuantized());
         assertTrue(partialIndex.getBackingIndex() instanceof NavigableIndex);
-        assertTrue(partialIndex.getEffectiveIndex() == partialIndex);
-        assertTrue(partialIndex.getBackingIndex().getEffectiveIndex() == partialIndex);
+        assertSame(partialIndex.getEffectiveIndex(), partialIndex);
+        assertSame(partialIndex.getBackingIndex().getEffectiveIndex(), partialIndex);
     }
 
     @Test
@@ -184,7 +184,7 @@ public class PartialIndexTest {
     @SuppressWarnings("unchecked")
     static SortedKeyStatisticsAttributeIndex<Integer, Car> backingIndexSupportsQuery(Query<Car> querySupportedByBackingIndex) {
         SortedKeyStatisticsAttributeIndex attributeIndex = mock(SortedKeyStatisticsAttributeIndex.class);
-        when(attributeIndex.supportsQuery(Mockito.eq(querySupportedByBackingIndex), Mockito.<QueryOptions>any())).thenReturn(true);
+        when(attributeIndex.supportsQuery(Mockito.eq(querySupportedByBackingIndex), Mockito.any())).thenReturn(true);
         return attributeIndex;
     }
 }

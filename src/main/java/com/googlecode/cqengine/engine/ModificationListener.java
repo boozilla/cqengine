@@ -30,7 +30,7 @@ public interface ModificationListener<O> {
      *  @param objectSet The objects being added
      * @param queryOptions Optional parameters for the update
      */
-    public boolean addAll(ObjectSet<O> objectSet, QueryOptions queryOptions);
+    boolean addAll(ObjectSet<O> objectSet, QueryOptions queryOptions);
 
     /**
      * Notifies the listener that the specified objects are being removed from the collection, and so it can take action
@@ -38,7 +38,7 @@ public interface ModificationListener<O> {
      *  @param objectSet The objects being removed
      * @param queryOptions Optional parameters for the update
      */
-    public boolean removeAll(ObjectSet<O> objectSet, QueryOptions queryOptions);
+    boolean removeAll(ObjectSet<O> objectSet, QueryOptions queryOptions);
 
     /**
      * Notifies the listener that all objects have been removed from the collection, and so it can take action
@@ -46,7 +46,7 @@ public interface ModificationListener<O> {
      *
      * @param queryOptions Optional parameters for the update
      */
-    public void clear(QueryOptions queryOptions);
+    void clear(QueryOptions queryOptions);
 
     /**
      * Notifies the listener that the given ObjectStore has just been created.
@@ -54,12 +54,12 @@ public interface ModificationListener<O> {
      * @param objectStore The ObjectStore which persists objects
      * @param queryOptions Optional parameters for the update
      */
-    public void init(ObjectStore<O> objectStore, QueryOptions queryOptions);
+    void init(ObjectStore<O> objectStore, QueryOptions queryOptions);
 
     /**
      * Notifies the listener that it has been removed from the collection, so that it can take action
      * to delete internal data structures.
      * @param queryOptions Optional parameters for the update
      */
-    public void destroy(QueryOptions queryOptions);
+    void destroy(QueryOptions queryOptions);
 }

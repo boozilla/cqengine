@@ -181,7 +181,7 @@ public class SQLAntlrListener<O> extends SQLGrammarBaseListener {
     public void exitEndsWithQuery(SQLGrammarParser.EndsWithQueryContext ctx) {
         Attribute<O, String> attribute = queryParser.getAttribute(ctx.attributeName(), String.class);
         String value = queryParser.parseValue(attribute, ctx.queryParameterLeadingPercent());
-        value = value.substring(1, value.length());
+        value = value.substring(1);
         addParsedQuery(ctx, QueryFactory.endsWith(attribute, value));
     }
 

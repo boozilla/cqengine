@@ -45,7 +45,7 @@ public class Min<O, A extends Comparable<A>> extends SimpleComparativeQuery<O, A
         Set<O> results = new HashSet<>();
         for (O object : objectsInCollection) {
             A attributeValue = attribute.getValue(object, queryOptions);
-            minimumValue = evaluate(object, attributeValue, minimumValue, (Set<O>) results);
+            minimumValue = evaluate(object, attributeValue, minimumValue, results);
         }
         return results;
     }

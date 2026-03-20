@@ -84,7 +84,7 @@ public abstract class SimpleNullableAttribute<O, A> extends AbstractAttribute<O,
     @Override
     public Iterable<A> getValues(O object, QueryOptions queryOptions) {
         A value = getValue(object, queryOptions);
-        return value == null ? Collections.<A>emptyList() : Collections.singletonList(value);
+        return value == null ? Collections.emptyList() : Collections.singletonList(value);
     }
 
     /**

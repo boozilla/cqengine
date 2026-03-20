@@ -45,7 +45,7 @@ public class Max<O, A extends Comparable<A>> extends SimpleComparativeQuery<O, A
         Set<O> results = new HashSet<>();
         for (O object : objectsInCollection) {
             A attributeValue = attribute.getValue(object, queryOptions);
-            maximumValue = evaluate(object, attributeValue, maximumValue, (Set<O>) results);
+            maximumValue = evaluate(object, attributeValue, maximumValue, results);
         }
         return results;
     }

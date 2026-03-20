@@ -39,7 +39,7 @@ import java.util.List;
 public class MarkableIterator<T> implements Iterator<T> {
 
     // A constant, iterator which returns no elements...
-    final Iterator<T> emptyIterator = Collections.<T>emptyList().iterator();
+    final Iterator<T> emptyIterator = Collections.emptyIterator();
 
     // The backing iterator supplied to the constructor, which provides objects we will buffer...
     final Iterator<T> backingIterator;

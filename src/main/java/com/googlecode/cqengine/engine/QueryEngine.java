@@ -36,7 +36,7 @@ public interface QueryEngine<O> {
      * @param queryOptions Optional parameters for the query
      * @return A {@link ResultSet} which provides objects matching the given query
      */
-    public ResultSet<O> retrieve(Query<O> query, QueryOptions queryOptions);
+    ResultSet<O> retrieve(Query<O> query, QueryOptions queryOptions);
 
     /**
      * Adds the given index to the collection.
@@ -46,7 +46,7 @@ public interface QueryEngine<O> {
      * @param index The index to add
      * @param queryOptions Optional parameters for the index
      */
-    public void addIndex(Index<O> index, QueryOptions queryOptions);
+    void addIndex(Index<O> index, QueryOptions queryOptions);
 
     /**
      * Removes the given index from the collection.
@@ -54,7 +54,7 @@ public interface QueryEngine<O> {
      * @param index The index to remove
      * @param queryOptions Optional parameters for the index
      */
-    public void removeIndex(Index<O> index, QueryOptions queryOptions);
+    void removeIndex(Index<O> index, QueryOptions queryOptions);
 
     /**
      * Returns the set of indexes which were previously added to the collection via the
@@ -63,5 +63,5 @@ public interface QueryEngine<O> {
      * @return The set of which were previously added to the collection via the
      * {@link #addIndex(com.googlecode.cqengine.index.Index, QueryOptions)} method
      */
-    public Iterable<Index<O>> getIndexes();
+    Iterable<Index<O>> getIndexes();
 }

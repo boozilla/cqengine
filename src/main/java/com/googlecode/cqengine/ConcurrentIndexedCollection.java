@@ -77,7 +77,7 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
      */
     @SuppressWarnings("unchecked")
     public ConcurrentIndexedCollection() {
-        this(OnHeapPersistence.<O>withoutPrimaryKey());
+        this(OnHeapPersistence.withoutPrimaryKey());
     }
 
     /**
@@ -589,9 +589,7 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
             if (!(o instanceof Set)) return false;
             Set that = (Set) o;
 
-            if (!getObjectStoreAsSet(queryOptions).equals(that)) return false;
-
-            return true;
+            return getObjectStoreAsSet(queryOptions).equals(that);
         }
         finally {
             closeRequestScopeResourcesIfNecessary(queryOptions);

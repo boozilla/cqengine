@@ -23,10 +23,7 @@ import com.googlecode.cqengine.query.Query;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static com.googlecode.cqengine.query.QueryFactory.*;
 import static java.util.Arrays.asList;
@@ -42,7 +39,7 @@ public class JoinTest {
     IndexedCollection<Car> cars = new ConcurrentIndexedCollection<Car>();
     Car car1 = new Car(1, "Ford Focus", "great condition, low mileage", asList("spare tyre", "sunroof"));
     Car car2 = new Car(2, "Ford Taurus", "dirty and unreliable, flat tyre", asList("spare tyre", "radio"));
-    Car car3 = new Car(3, "Honda Civic", "has a flat tyre and high mileage", asList("radio"));
+    Car car3 = new Car(3, "Honda Civic", "has a flat tyre and high mileage", Collections.singletonList("radio"));
     Car car4 = new Car(4, "BMW M3", "2013 model", asList("radio", "convertible"));
     Car car5 = new Car(5, "BMW M6", "2014 model", asList("radio", "convertible"));
     { cars.addAll(asList(car1, car2, car3, car4, car5)); }
@@ -50,9 +47,9 @@ public class JoinTest {
     // Create an indexed collection of garages...
     final IndexedCollection<Garage> garages = new ConcurrentIndexedCollection<Garage>();
     Garage garage1 = new Garage(1, "Joe's garage", "London", asList("Ford Focus", "Honda Civic"));
-    Garage garage2 = new Garage(2, "Jane's garage", "Dublin", asList("BMW M3"));
+    Garage garage2 = new Garage(2, "Jane's garage", "Dublin", Collections.singletonList("BMW M3"));
     Garage garage3 = new Garage(3, "John's garage", "Dublin", asList("Ford Focus", "Ford Taurus"));
-    Garage garage4 = new Garage(4, "Jill's garage", "Dublin", asList("Ford Focus"));
+    Garage garage4 = new Garage(4, "Jill's garage", "Dublin", Collections.singletonList("Ford Focus"));
     Garage garage5 = new Garage(5, "Sam's garage", "Dubai", asList("BMW M3", "BMW M6"));
     Garage garage6 = new Garage(6, "Jen's garage", "Galway", asList("Bat Mobile", "Golf Cart"));
 

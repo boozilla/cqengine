@@ -58,9 +58,7 @@ public class Not<O> extends LogicalQuery<O> {
 
         Not other = (Not) o;
 
-        if (!negatedQuery.equals(other.negatedQuery)) return false;
-
-        return true;
+        return negatedQuery.equals(other.negatedQuery);
     }
 
     @Override
@@ -70,10 +68,9 @@ public class Not<O> extends LogicalQuery<O> {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("not(");
-        sb.append(negatedQuery);
-        sb.append(")");
-        return sb.toString();
+        final String sb = "not(" +
+                negatedQuery +
+                ")";
+        return sb;
     }
 }

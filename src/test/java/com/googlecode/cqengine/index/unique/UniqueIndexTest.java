@@ -25,6 +25,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 
@@ -45,7 +46,7 @@ public class UniqueIndexTest {
         // Add some objects to the collection...
         cars.add(new Car(1, "ford focus", "great condition, low mileage", Arrays.asList("spare tyre", "sunroof")));
         cars.add(new Car(2, "ford taurus", "dirty and unreliable, flat tyre", Arrays.asList("spare tyre", "radio")));
-        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Arrays.asList("radio")));
+        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Collections.singletonList("radio")));
 
         Query<Car> query = equal(Car.CAR_ID, 2);
         ResultSet<Car> rs = cars.retrieve(query);
@@ -64,9 +65,9 @@ public class UniqueIndexTest {
         // Add some objects to the collection...
         cars.add(new Car(1, "ford focus", "great condition, low mileage", Arrays.asList("spare tyre", "sunroof")));
         cars.add(new Car(2, "ford taurus", "dirty and unreliable, flat tyre", Arrays.asList("spare tyre", "radio")));
-        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Arrays.asList("radio")));
+        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Collections.singletonList("radio")));
 
-        cars.add(new Car(2, "some other car", "foo", Arrays.asList("bar")));
+        cars.add(new Car(2, "some other car", "foo", Collections.singletonList("bar")));
     }
 
     @Test(expected = UniqueIndex.UniqueConstraintViolatedException.class)

@@ -262,7 +262,7 @@ public class PrimaryKeyedOnHeapObjectStoreIndex<O, A extends Comparable<A>> exte
             @Override
             public Iterator<O> iterator() {
                 final O value = objectStore.backingMap.get(key);
-                return value == null ? Collections.<O>emptyList().iterator() : Collections.singletonList(value).iterator();
+                return value == null ? Collections.emptyIterator() : Collections.singletonList(value).iterator();
             }
 
             @Override

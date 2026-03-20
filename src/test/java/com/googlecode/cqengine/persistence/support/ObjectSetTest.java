@@ -44,7 +44,7 @@ public class ObjectSetTest {
     public void testFromObjectStore_IteratorClose() throws Exception {
         ObjectStore<Car> objectStore = mock(ObjectStore.class);
         CloseableIterator<Car> closeableIterator = mock(CloseableIterator.class);
-        when(objectStore.iterator(Mockito.<QueryOptions>any())).thenReturn(closeableIterator);
+        when(objectStore.iterator(Mockito.any())).thenReturn(closeableIterator);
 
         ObjectSet<Car> objectSet = ObjectSet.fromObjectStore(objectStore, noQueryOptions());
         CloseableIterator<Car> objectSetIterator = objectSet.iterator();
@@ -60,7 +60,7 @@ public class ObjectSetTest {
         when(closeableIterator.hasNext()).thenReturn(true);
         when(closeableIterator.next()).thenReturn(CarFactory.createCar(1));
 
-        when(objectStore.iterator(Mockito.<QueryOptions>any())).thenReturn(closeableIterator);
+        when(objectStore.iterator(Mockito.any())).thenReturn(closeableIterator);
 
         ObjectSet<Car> objectSet = ObjectSet.fromObjectStore(objectStore, noQueryOptions());
         CloseableIterator<Car> objectSetIterator = objectSet.iterator();
@@ -75,7 +75,7 @@ public class ObjectSetTest {
     public void testFromObjectStore_ObjectSetClose() throws Exception {
         ObjectStore<Car> objectStore = mock(ObjectStore.class);
         CloseableIterator<Car> closeableIterator = mock(CloseableIterator.class);
-        when(objectStore.iterator(Mockito.<QueryOptions>any())).thenReturn(closeableIterator);
+        when(objectStore.iterator(Mockito.any())).thenReturn(closeableIterator);
 
         ObjectSet<Car> objectSet = ObjectSet.fromObjectStore(objectStore, noQueryOptions());
         objectSet.iterator();
@@ -90,10 +90,10 @@ public class ObjectSetTest {
         ObjectStore<Car> objectStore = mock(ObjectStore.class);
         CloseableIterator<Car> closeableIterator = mock(CloseableIterator.class);
         when(closeableIterator.hasNext()).thenReturn(false);
-        when(objectStore.iterator(Mockito.<QueryOptions>any())).thenReturn(closeableIterator);
+        when(objectStore.iterator(Mockito.any())).thenReturn(closeableIterator);
 
         ObjectSet<Car> objectSet = ObjectSet.fromObjectStore(objectStore, noQueryOptions());
-        Assert.assertEquals(true, objectSet.isEmpty());
+        Assert.assertTrue(objectSet.isEmpty());
         Mockito.verify(closeableIterator, times(1)).close();
     }
 
@@ -103,10 +103,10 @@ public class ObjectSetTest {
         ObjectStore<Car> objectStore = mock(ObjectStore.class);
         CloseableIterator<Car> closeableIterator = mock(CloseableIterator.class);
         when(closeableIterator.hasNext()).thenReturn(true);
-        when(objectStore.iterator(Mockito.<QueryOptions>any())).thenReturn(closeableIterator);
+        when(objectStore.iterator(Mockito.any())).thenReturn(closeableIterator);
 
         ObjectSet<Car> objectSet = ObjectSet.fromObjectStore(objectStore, noQueryOptions());
-        Assert.assertEquals(false, objectSet.isEmpty());
+        Assert.assertFalse(objectSet.isEmpty());
         Mockito.verify(closeableIterator, times(1)).close();
     }
 
@@ -116,7 +116,7 @@ public class ObjectSetTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testFromCollection_IteratorClose() throws Exception {
-        ObjectSet<Car> objectSet = ObjectSet.fromCollection(Collections.<Car>emptySet());
+        ObjectSet<Car> objectSet = ObjectSet.fromCollection(Collections.emptySet());
         objectSet.iterator().close(); // Can't really verify anything because close() is a no-op
     }
 
@@ -145,7 +145,7 @@ public class ObjectSetTest {
         when(collection.isEmpty()).thenReturn(true);
 
         ObjectSet<Car> objectSet = ObjectSet.fromCollection(collection);
-        Assert.assertEquals(true, objectSet.isEmpty());
+        Assert.assertTrue(objectSet.isEmpty());
     }
 
     @Test
@@ -155,6 +155,6 @@ public class ObjectSetTest {
         when(collection.isEmpty()).thenReturn(false);
 
         ObjectSet<Car> objectSet = ObjectSet.fromCollection(collection);
-        Assert.assertEquals(false, objectSet.isEmpty());
+        Assert.assertFalse(objectSet.isEmpty());
     }
 }

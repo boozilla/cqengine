@@ -37,9 +37,9 @@ public class TupleCombinationGeneratorTest {
     @Test
     public void testGenerateCombinations_AscendingListSize() {
         List<List<Object>> inputLists = new ArrayList<List<Object>>() {{
-            add(Arrays.<Object>asList(1));
-            add(Arrays.<Object>asList("bar", "baz"));
-            add(Arrays.<Object>asList(2.0, 3.0, 4.0));
+            add(Collections.singletonList(1));
+            add(Arrays.asList("bar", "baz"));
+            add(Arrays.asList(2.0, 3.0, 4.0));
         }};
         List<List<Object>> permutations = TupleCombinationGenerator.generateCombinations(inputLists);
         Assert.assertEquals(
@@ -51,9 +51,9 @@ public class TupleCombinationGeneratorTest {
     @Test
     public void testGenerateCombinations_EqualListSize() {
         List<List<Object>> inputLists = new ArrayList<List<Object>>() {{
-            add(Arrays.<Object>asList(1, 2));
-            add(Arrays.<Object>asList("bar", "baz"));
-            add(Arrays.<Object>asList(3.0, 4.0));
+            add(Arrays.asList(1, 2));
+            add(Arrays.asList("bar", "baz"));
+            add(Arrays.asList(3.0, 4.0));
         }};
         List<List<Object>> permutations = TupleCombinationGenerator.generateCombinations(inputLists);
         Assert.assertEquals(
@@ -65,9 +65,9 @@ public class TupleCombinationGeneratorTest {
     @Test
     public void testGenerateCombinations_DescendingListSize() {
         List<List<Object>> inputLists = new ArrayList<List<Object>>() {{
-            add(Arrays.<Object>asList(1, 2, 3));
-            add(Arrays.<Object>asList("bar", "baz"));
-            add(Arrays.<Object>asList(2.0));
+            add(Arrays.asList(1, 2, 3));
+            add(Arrays.asList("bar", "baz"));
+            add(Collections.singletonList(2.0));
         }};
         List<List<Object>> permutations = TupleCombinationGenerator.generateCombinations(inputLists);
         Assert.assertEquals(
@@ -80,8 +80,8 @@ public class TupleCombinationGeneratorTest {
     public void testGenerateCombinations_EmptySubList1() {
         List<List<Object>> inputLists = new ArrayList<List<Object>>() {{
             add(Collections.emptyList());
-            add(Arrays.<Object>asList("bar", "baz"));
-            add(Arrays.<Object>asList(2.0, 3.0, 4.0));
+            add(Arrays.asList("bar", "baz"));
+            add(Arrays.asList(2.0, 3.0, 4.0));
         }};
         List<List<Object>> permutations = TupleCombinationGenerator.generateCombinations(inputLists);
         Assert.assertTrue(permutations.isEmpty());
@@ -90,9 +90,9 @@ public class TupleCombinationGeneratorTest {
     @Test
     public void testGenerateCombinations_EmptySubList2() {
         List<List<Object>> inputLists = new ArrayList<List<Object>>() {{
-            add(Arrays.<Object>asList(1));
+            add(Collections.singletonList(1));
             add(Collections.emptyList());
-            add(Arrays.<Object>asList(2.0, 3.0, 4.0));
+            add(Arrays.asList(2.0, 3.0, 4.0));
         }};
         List<List<Object>> permutations = TupleCombinationGenerator.generateCombinations(inputLists);
         Assert.assertTrue(permutations.isEmpty());
@@ -101,8 +101,8 @@ public class TupleCombinationGeneratorTest {
     @Test
     public void testGenerateCombinations_EmptySubList3() {
         List<List<Object>> inputLists = new ArrayList<List<Object>>() {{
-            add(Arrays.<Object>asList(1));
-            add(Arrays.<Object>asList("bar", "baz"));
+            add(Collections.singletonList(1));
+            add(Arrays.asList("bar", "baz"));
             add(Collections.emptyList());
         }};
         List<List<Object>> permutations = TupleCombinationGenerator.generateCombinations(inputLists);

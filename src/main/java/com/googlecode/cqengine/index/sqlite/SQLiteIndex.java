@@ -907,9 +907,7 @@ public class SQLiteIndex<A extends Comparable<A>, O, K> extends AbstractAttribut
 
         SQLiteIndex that = (SQLiteIndex) o;
 
-        if (!attribute.equals(that.attribute)) return false;
-
-        return true;
+        return attribute.equals(that.attribute);
     }
 
     @Override

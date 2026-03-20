@@ -209,7 +209,7 @@ public class ReversedRadixTreeIndex<A extends CharSequence, O> extends AbstractA
             @Override
             public Iterator<O> iterator() {
                 ResultSet<O> rs = tree.getValueForExactKey(equal.getValue());
-                return rs == null ? Collections.<O>emptySet().iterator() : rs.iterator();
+                return rs == null ? Collections.emptyIterator() : rs.iterator();
             }
             @Override
             public boolean contains(O object) {
@@ -272,7 +272,7 @@ public class ReversedRadixTreeIndex<A extends CharSequence, O> extends AbstractA
      * {@link java.util.Collections#newSetFromMap(java.util.Map)}
      */
     public StoredResultSet<O> createValueSet() {
-        return new StoredSetBasedResultSet<O>(Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
+        return new StoredSetBasedResultSet<O>(Collections.newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
     }
 
     protected StoredResultSet<O> createValueSet(QueryOptions queryOptions) {

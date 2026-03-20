@@ -205,9 +205,7 @@ public class SQLiteIdentityIndex<A extends Comparable<A>, O> implements Identity
 
         SQLiteIdentityIndex that = (SQLiteIdentityIndex) o;
 
-        if (!primaryKeyAttribute.equals(that.primaryKeyAttribute)) return false;
-
-        return true;
+        return primaryKeyAttribute.equals(that.primaryKeyAttribute);
     }
 
     @Override

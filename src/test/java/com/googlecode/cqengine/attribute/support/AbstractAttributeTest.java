@@ -21,6 +21,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -31,21 +32,21 @@ public class AbstractAttributeTest {
         public String getValue(Integer object, QueryOptions queryOptions) {
             return String.valueOf(object);
         }
-    };
+    }
 
     static class ValidAttribute2 extends SimpleAttribute<Integer, String> {
         @Override
         public String getValue(Integer object, QueryOptions queryOptions) {
             return String.valueOf(object);
         }
-    };
+    }
 
     static class ValidAttributeWithParameterizedTypes extends SimpleAttribute<Set<Integer>, List<String>> {
         @Override
         public List<String> getValue(Set<Integer> object, QueryOptions queryOptions) {
-            return Arrays.asList(String.valueOf(object));
+            return Collections.singletonList(String.valueOf(object));
         }
-    };
+    }
 
     static class ValidAttributeMultipleConstructors extends SimpleAttribute<Integer, String> {
 
@@ -68,14 +69,14 @@ public class AbstractAttributeTest {
         public String getValue(Integer object, QueryOptions queryOptions) {
             return String.valueOf(object);
         }
-    };
+    }
 
     static class InvalidAttribute extends SimpleAttribute {
         @Override
         public Object getValue(Object object, QueryOptions queryOptions) {
             return String.valueOf(object);
         }
-    };
+    }
 
     @Test
     public void testReadGenericObjectType() throws Exception {

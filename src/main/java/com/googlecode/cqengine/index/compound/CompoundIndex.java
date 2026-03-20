@@ -74,7 +74,7 @@ public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundVal
     protected CompoundIndex(Factory<ConcurrentMap<CompoundValueTuple<O>, StoredResultSet<O>>> indexMapFactory, Factory<StoredResultSet<O>> valueSetFactory, CompoundAttribute<O> attribute) {
         // We can supply the superclass constructor with an empty set of supported queries,
         // because we implement/override supportsQuery() in this class instead...
-        super(indexMapFactory, valueSetFactory, attribute, Collections.<Class<? extends Query>>emptySet());
+        super(indexMapFactory, valueSetFactory, attribute, Collections.emptySet());
         this.attribute = attribute;
     }
 
@@ -140,7 +140,7 @@ public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundVal
                 @Override
                 public Iterator<O> iterator() {
                     ResultSet<O> rs = indexMap.get(getQuantizedValue(valueTuple));
-                    return rs == null ? Collections.<O>emptySet().iterator() : filterForQuantization(rs, compoundQuery, queryOptions).iterator();
+                    return rs == null ? Collections.emptyIterator() : filterForQuantization(rs, compoundQuery, queryOptions).iterator();
                 }
                 @Override
                 public boolean contains(O object) {
@@ -347,7 +347,7 @@ public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundVal
     public static class DefaultValueSetFactory<O> implements Factory<StoredResultSet<O>> {
         @Override
         public StoredResultSet<O> create() {
-            return new StoredSetBasedResultSet<O>(Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
+            return new StoredSetBasedResultSet<O>(Collections.newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
         }
     }
 }

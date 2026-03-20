@@ -52,9 +52,7 @@ public class CompoundValueTuple<O> {
         CompoundValueTuple that = (CompoundValueTuple) o;
 
         if (hashCode != that.hashCode) return false;
-        if (!attributeValues.equals(that.attributeValues)) return false;
-
-        return true;
+        return attributeValues.equals(that.attributeValues);
     }
 
     @Override

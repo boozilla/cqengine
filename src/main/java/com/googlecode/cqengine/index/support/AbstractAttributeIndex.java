@@ -76,9 +76,7 @@ public abstract class AbstractAttributeIndex<A, O> implements AttributeIndex<A, 
 
         AbstractAttributeIndex that = (AbstractAttributeIndex) o;
 
-        if (!attribute.equals(that.attribute)) return false;
-
-        return true;
+        return attribute.equals(that.attribute);
     }
 
     @Override

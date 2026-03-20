@@ -22,6 +22,8 @@ import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
 
+import java.util.Objects;
+
 import static com.googlecode.cqengine.query.QueryFactory.and;
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static java.util.Objects.requireNonNull;
@@ -112,14 +114,12 @@ final IndexedCollection<F> foreignCollection;
         ExistsIn existsIn = (ExistsIn) o;
 
         if (!foreignKeyAttribute.equals(existsIn.foreignKeyAttribute)) return false;
-        if (foreignRestrictions != null ? !foreignRestrictions.equals(existsIn.foreignRestrictions) : existsIn.foreignRestrictions != null)
+        if (!Objects.equals(foreignRestrictions, existsIn.foreignRestrictions))
             return false;
         if (!localKeyAttribute.equals(existsIn.localKeyAttribute)) return false;
 
         // Evaluate equals() on the foreignCollection last, to avoid performance hit if possible...
-        if (!foreignCollection.equals(existsIn.foreignCollection)) return false;
-
-        return true;
+        return foreignCollection.equals(existsIn.foreignCollection);
     }
 
     @Override

@@ -57,9 +57,7 @@ public class StringIsPrefixOf<O, A extends CharSequence> extends SimpleQuery<O, 
         StringIsPrefixOf<?, ?> that = (StringIsPrefixOf<?, ?>) o;
 
         if (!attribute.equals(that.attribute)) return false;
-        if (!value.equals(that.value)) return false;
-
-        return true;
+        return value.equals(that.value);
     }
 
 

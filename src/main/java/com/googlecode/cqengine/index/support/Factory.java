@@ -30,5 +30,5 @@ public interface Factory<T> {
      * Creates an object.
      * @return a new instance of the object
      */
-    public T create();
+    T create();
 }

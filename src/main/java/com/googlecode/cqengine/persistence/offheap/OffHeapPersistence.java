@@ -151,7 +151,7 @@ public class OffHeapPersistence<O, A extends Comparable<A>> implements SQLitePer
 
     protected Connection getConnectionInternal(Index<?> index, QueryOptions queryOptions) {
         if (closed) {
-            throw new IllegalStateException("OffHeapPersistence has been closed: " + this.toString());
+            throw new IllegalStateException("OffHeapPersistence has been closed: " + this);
         }
         try {
             return sqLiteDataSource.getConnection();

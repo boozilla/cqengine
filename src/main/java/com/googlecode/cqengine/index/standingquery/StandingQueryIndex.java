@@ -48,7 +48,7 @@ public class StandingQueryIndex<O> implements Index<O>, OnHeapTypeIndex {
     private final Query<O> standingQuery;
 
     private final StoredResultSet<O> storedResultSet = new StoredSetBasedResultSet<O>(
-            Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>()),
+            Collections.newSetFromMap(new ConcurrentHashMap<O, Boolean>()),
             INDEX_RETRIEVAL_COST
     );
 

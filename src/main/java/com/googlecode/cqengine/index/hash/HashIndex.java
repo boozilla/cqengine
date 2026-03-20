@@ -158,7 +158,7 @@ public class HashIndex<A, O> extends AbstractMapBasedAttributeIndex<A, O, Concur
             @Override
             public Iterator<O> iterator() {
                 ResultSet<O> rs = indexMap.get(getQuantizedValue(equal.getValue()));
-                return rs == null ? Collections.<O>emptySet().iterator() : filterForQuantization(rs, equal, queryOptions).iterator();
+                return rs == null ? Collections.emptyIterator() : filterForQuantization(rs, equal, queryOptions).iterator();
             }
             @Override
             public boolean contains(O object) {
@@ -374,7 +374,7 @@ public class HashIndex<A, O> extends AbstractMapBasedAttributeIndex<A, O, Concur
     public static class DefaultValueSetFactory<O> implements Factory<StoredResultSet<O>> {
         @Override
         public StoredResultSet<O> create() {
-            return new StoredSetBasedResultSet<O>(Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
+            return new StoredSetBasedResultSet<O>(Collections.newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
         }
     }
 
@@ -388,7 +388,7 @@ public class HashIndex<A, O> extends AbstractMapBasedAttributeIndex<A, O, Concur
     public static class CompactValueSetFactory<O> implements Factory<StoredResultSet<O>> {
         @Override
         public StoredResultSet<O> create() {
-            return new StoredSetBasedResultSet<O>(Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>( 1, 1.0F, 1)));
+            return new StoredSetBasedResultSet<O>(Collections.newSetFromMap(new ConcurrentHashMap<O, Boolean>( 1, 1.0F, 1)));
         }
     }
 }

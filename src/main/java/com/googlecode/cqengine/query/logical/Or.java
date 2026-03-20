@@ -89,9 +89,7 @@ public class Or<O> extends LogicalQuery<O> {
         Or or = (Or) o;
 
         if (disjoint != or.disjoint) return false;
-        if (!childQueries.equals(or.childQueries)) return false;
-
-        return true;
+        return childQueries.equals(or.childQueries);
     }
 
     /**

@@ -19,6 +19,7 @@ import com.googlecode.cqengine.query.option.QueryOptions;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -117,7 +118,7 @@ public class FilteringIteratorTest {
 
     @Test(expected = NoSuchElementException.class)
     public void testEmptyDelegate() {
-        List<String> testList = Arrays.asList();
+        List<String> testList = Collections.emptyList();
         FilteringIterator<String> iterator = new FilteringIterator<String>(testList.iterator(), noQueryOptions()) {
             @Override
             public boolean isValid(String object, QueryOptions queryOptions) {

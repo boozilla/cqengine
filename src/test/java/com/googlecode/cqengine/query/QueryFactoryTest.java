@@ -25,6 +25,7 @@ import com.googlecode.cqengine.testutil.CarFactory;
 import net.jodah.typetools.TypeResolver;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -48,7 +49,7 @@ public class QueryFactoryTest {
         AttributeOrder<Car> o3 = descending(Car.MODEL);
         AttributeOrder<Car> o4 = descending(Car.FEATURES);
         AttributeOrder<Car> o5 = descending(Car.PRICE);
-        assertEquals(orderBy(o1), orderBy(asList(o1)));
+        assertEquals(orderBy(o1), orderBy(Collections.singletonList(o1)));
         assertEquals(orderBy(o1, o2), orderBy(asList(o1, o2)));
         assertEquals(orderBy(o1, o2, o3), orderBy(asList(o1, o2, o3)));
         assertEquals(orderBy(o1, o2, o3, o4), orderBy(asList(o1, o2, o3, o4)));

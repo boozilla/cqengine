@@ -144,7 +144,7 @@ public class SQLiteObjectStore<O, A extends Comparable<A>> implements ObjectStor
         }
         final boolean modified = backingIndex.addAll(ObjectSet.fromCollection(Collections.singleton(object)), queryOptions);
         if (!modified) {
-            return existingObject == null ? ModificationResult.<O>notFound() : ModificationResult.unchanged(existingObject);
+            return existingObject == null ? ModificationResult.notFound() : ModificationResult.unchanged(existingObject);
         }
         return existingObject == null ? ModificationResult.inserted(object) : ModificationResult.replaced(existingObject, object);
     }

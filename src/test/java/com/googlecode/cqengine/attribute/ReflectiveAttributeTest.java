@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 
@@ -47,7 +48,7 @@ public class ReflectiveAttributeTest {
         // Add some objects to the collection...
         cars.add(new Car(1, "ford focus", "great condition, low mileage", Arrays.asList("spare tyre", "sunroof")));
         cars.add(new Car(2, "ford taurus", "dirty and unreliable, flat tyre", Arrays.asList("spare tyre", "radio")));
-        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Arrays.asList("radio")));
+        cars.add(new Car(3, "honda civic", "has a flat tyre and high mileage", Collections.singletonList("radio")));
 
         Assert.assertEquals(cars.retrieve(equal(NAME, "honda civic")).size(), 1);
     }

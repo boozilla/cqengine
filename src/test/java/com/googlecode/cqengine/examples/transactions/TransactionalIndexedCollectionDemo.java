@@ -21,6 +21,8 @@ import com.googlecode.cqengine.resultset.ResultSet;
 import com.googlecode.cqengine.testutil.Car;
 import com.googlecode.cqengine.testutil.CarFactory;
 
+import java.util.Collections;
+
 import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static java.util.Arrays.asList;
 
@@ -50,7 +52,7 @@ public class TransactionalIndexedCollectionDemo {
         cars.removeAll(asList(car3, car4));
 
         // Replace 1 car with 2 other cars in a single transaction...
-        cars.update(asList(car2), asList(car3, car4));
+        cars.update(Collections.singletonList(car2), asList(car3, car4));
 
         // ===== Examples of querying the collection using MVCC transactions... =====
 

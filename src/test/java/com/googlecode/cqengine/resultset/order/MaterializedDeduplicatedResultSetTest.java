@@ -28,7 +28,7 @@ import java.util.Iterator;
 public class MaterializedDeduplicatedResultSetTest {
     @Test
     public void testMaterializingResultSetIterator() throws Exception {
-        final MaterializedDeduplicatedResultSet<Object> set = new MaterializedDeduplicatedResultSet<Object>(new StoredSetBasedResultSet<Object>(Collections.<Object>singleton(this)));
+        final MaterializedDeduplicatedResultSet<Object> set = new MaterializedDeduplicatedResultSet<Object>(new StoredSetBasedResultSet<Object>(Collections.singleton(this)));
         final Iterator<Object> it = set.iterator();
         Assert.assertTrue(it.hasNext());
         Assert.assertTrue(it.hasNext());

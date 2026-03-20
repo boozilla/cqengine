@@ -63,7 +63,7 @@ public class ResultSetUnion<O> extends ResultSet<O> {
         // When moving on to the next ResultSet, this iterator adds the ResultSet it has just iterated
         // to the list of resultSetsAlreadyIterated above...
         Iterator<O> unionAllIterator = new ConcatenatingIterator<O>() {
-            private Iterator<? extends ResultSet<O>> resultSetsIterator = resultSets.iterator();
+            private final Iterator<? extends ResultSet<O>> resultSetsIterator = resultSets.iterator();
             private ResultSet<O> currentResultSet = null;
             @Override
             public Iterator<O> getNextIterator() {

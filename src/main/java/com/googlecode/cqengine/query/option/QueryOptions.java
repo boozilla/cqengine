@@ -73,9 +73,7 @@ public class QueryOptions {
 
         QueryOptions that = (QueryOptions) o;
 
-        if (!options.equals(that.options)) return false;
-
-        return true;
+        return options.equals(that.options);
     }
 
     @Override

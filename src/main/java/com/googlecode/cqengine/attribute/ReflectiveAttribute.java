@@ -96,9 +96,7 @@ public class ReflectiveAttribute<O, A> extends SimpleAttribute<O, A> {
         ReflectiveAttribute that = (ReflectiveAttribute) o;
         if (!that.canEqual(this)) return false;
 
-        if (!field.equals(that.field)) return false;
-
-        return true;
+        return field.equals(that.field);
     }
 
     @Override

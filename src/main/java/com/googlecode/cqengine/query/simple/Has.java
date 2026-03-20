@@ -57,9 +57,7 @@ public class Has<O, A> extends SimpleQuery<O, A> {
 
         Has equal = (Has) o;
 
-        if (!attribute.equals(equal.attribute)) return false;
-
-        return true;
+        return attribute.equals(equal.attribute);
     }
 
     @Override

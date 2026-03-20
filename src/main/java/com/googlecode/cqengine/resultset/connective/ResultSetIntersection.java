@@ -53,7 +53,7 @@ public class ResultSetIntersection<O> extends ResultSet<O> {
     @Override
     public Iterator<O> iterator() {
         if (resultSets.isEmpty()) {
-            return Collections.<O>emptySet().iterator();
+            return Collections.emptyIterator();
         }
         else if (resultSets.size() == 1) {
             return resultSets.get(0).iterator();

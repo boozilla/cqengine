@@ -79,9 +79,7 @@ public class AttributeOrder<O> {
         AttributeOrder that = (AttributeOrder) o;
 
         if (descending != that.descending) return false;
-        if (!attribute.equals(that.attribute)) return false;
-
-        return true;
+        return attribute.equals(that.attribute);
     }
 
     @Override

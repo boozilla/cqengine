@@ -35,14 +35,14 @@ public interface KeyStatisticsIndex<A, O> extends Index<O> {
      * @return The distinct keys in the index
      * @param queryOptions Optional parameters for the query
      */
-    public CloseableIterable<A> getDistinctKeys(QueryOptions queryOptions);
+    CloseableIterable<A> getDistinctKeys(QueryOptions queryOptions);
 
     /**
      * @param key A key which may be contained in the index
      * @param queryOptions Optional parameters for the query
      * @return The number of objects stored in the bucket in the index with the given key
      */
-    public Integer getCountForKey(A key, QueryOptions queryOptions);
+    Integer getCountForKey(A key, QueryOptions queryOptions);
 
     /**
      * Returns the count of distinct keys in the index.
@@ -50,7 +50,7 @@ public interface KeyStatisticsIndex<A, O> extends Index<O> {
      * @param queryOptions Optional parameters for the query
      * @return The count of distinct keys in the index.
      */
-    public Integer getCountOfDistinctKeys(QueryOptions queryOptions);
+    Integer getCountOfDistinctKeys(QueryOptions queryOptions);
 
     /**
      * Returns the statistics {@link KeyStatistics} for all distinct keys in the index
@@ -58,7 +58,7 @@ public interface KeyStatisticsIndex<A, O> extends Index<O> {
      * @param queryOptions Optional parameters for the query
      * @return The statistics {@link KeyStatistics} for all distinct keys in the index
      */
-    public CloseableIterable<KeyStatistics<A>> getStatisticsForDistinctKeys(QueryOptions queryOptions);
+    CloseableIterable<KeyStatistics<A>> getStatisticsForDistinctKeys(QueryOptions queryOptions);
 
     /**
      * Returns the keys and corresponding values for those keys in the index. Note the same key
@@ -69,6 +69,6 @@ public interface KeyStatisticsIndex<A, O> extends Index<O> {
      *
      * @param queryOptions Optional parameters for the query
      */
-    public CloseableIterable<KeyValue<A, O>> getKeysAndValues(QueryOptions queryOptions);
+    CloseableIterable<KeyValue<A, O>> getKeysAndValues(QueryOptions queryOptions);
 
 }

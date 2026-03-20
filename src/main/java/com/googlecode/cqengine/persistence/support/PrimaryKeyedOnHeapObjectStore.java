@@ -142,7 +142,7 @@ public class PrimaryKeyedOnHeapObjectStore<O, A extends Comparable<A>> implement
             return ModificationResult.notFound();
         }
         final O removedObject = backingMap.remove(primaryKey);
-        return removedObject == null ? ModificationResult.<O>notFound() : ModificationResult.removed(removedObject);
+        return removedObject == null ? ModificationResult.notFound() : ModificationResult.removed(removedObject);
     }
 
     @Override

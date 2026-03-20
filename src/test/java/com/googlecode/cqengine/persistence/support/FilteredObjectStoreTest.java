@@ -63,7 +63,7 @@ public class FilteredObjectStoreTest {
     public void testIterator_Close() {
         CloseableIterator<Car> mockIterator = mock(CloseableIterator.class);
         ObjectStore<Car> mockObjectStore = mock(ObjectStore.class);
-        Mockito.when(mockObjectStore.iterator(Mockito.<QueryOptions>any())).thenReturn(mockIterator);
+        Mockito.when(mockObjectStore.iterator(Mockito.any())).thenReturn(mockIterator);
 
         FilteredObjectStore<Car> filteredObjectStore = new FilteredObjectStore<Car>(
                 mockObjectStore,
@@ -77,7 +77,7 @@ public class FilteredObjectStoreTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void testAddAll() {
-        filteredObjectStore.addAll(Collections.<Car>emptySet(), noQueryOptions());
+        filteredObjectStore.addAll(Collections.emptySet(), noQueryOptions());
     }
 
     @Test(expected = UnsupportedOperationException.class)

@@ -80,26 +80,17 @@ public class Between<O, A extends Comparable<A>> extends SimpleQuery<O, A> {
     protected boolean matchesSimpleAttribute(SimpleAttribute<O, A> attribute, O object, QueryOptions queryOptions) {
         A attributeValue = attribute.getValue(object, queryOptions);
         if (lowerInclusive && upperInclusive) {
-            if (lowerValue.compareTo(attributeValue) <= 0 && upperValue.compareTo(attributeValue) >= 0) {
-                return true;
-            }
+            return lowerValue.compareTo(attributeValue) <= 0 && upperValue.compareTo(attributeValue) >= 0;
         }
         else if (lowerInclusive) {
-            if (lowerValue.compareTo(attributeValue) <= 0 && upperValue.compareTo(attributeValue) > 0) {
-                return true;
-            }
+            return lowerValue.compareTo(attributeValue) <= 0 && upperValue.compareTo(attributeValue) > 0;
         }
         else if (upperInclusive) {
-            if (lowerValue.compareTo(attributeValue) < 0 && upperValue.compareTo(attributeValue) >= 0) {
-                return true;
-            }
+            return lowerValue.compareTo(attributeValue) < 0 && upperValue.compareTo(attributeValue) >= 0;
         }
         else {
-            if (lowerValue.compareTo(attributeValue) < 0 && upperValue.compareTo(attributeValue) > 0) {
-                return true;
-            }
+            return lowerValue.compareTo(attributeValue) < 0 && upperValue.compareTo(attributeValue) > 0;
         }
-        return false;
     }
 
     @Override
@@ -147,9 +138,7 @@ public class Between<O, A extends Comparable<A>> extends SimpleQuery<O, A> {
         if (lowerInclusive != between.lowerInclusive) return false;
         if (upperInclusive != between.upperInclusive) return false;
         if (!lowerValue.equals(between.lowerValue)) return false;
-        if (!upperValue.equals(between.upperValue)) return false;
-
-        return true;
+        return upperValue.equals(between.upperValue);
     }
 
     @Override

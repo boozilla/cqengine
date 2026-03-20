@@ -71,9 +71,7 @@ public class StringIsContainedIn<O, A extends CharSequence> extends SimpleQuery<
         StringIsContainedIn that = (StringIsContainedIn) o;
 
         if (!attribute.equals(that.attribute)) return false;
-        if (!value.equals(that.value)) return false;
-
-        return true;
+        return value.equals(that.value);
     }
 
     @Override

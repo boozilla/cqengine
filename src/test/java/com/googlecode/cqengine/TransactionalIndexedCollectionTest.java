@@ -110,7 +110,7 @@ public class TransactionalIndexedCollectionTest extends TestCase {
         assertEquals(8, collection.currentVersion.versionNumber);
 
         // Replacing no objects should not cause version number to change...
-        collection.update(Collections.<Car>emptySet(), Collections.<Car>emptySet());
+        collection.update(Collections.emptySet(), Collections.emptySet());
         assertEquals(8, collection.currentVersion.versionNumber);
     }
 
@@ -248,7 +248,7 @@ public class TransactionalIndexedCollectionTest extends TestCase {
             // Verify that with STRICT_REPLACEMENT, when no objects are to be replaced, collection is modified...
             TransactionalIndexedCollection<Integer> indexedCollection = new TransactionalIndexedCollection<Integer>(Integer.class);
             indexedCollection.addAll(asSet(1, 2, 3));
-            assertTrue(indexedCollection.update(Collections.<Integer>emptySet(), asSet(4, 5), queryOptions(enableFlags(TransactionalIndexedCollection.STRICT_REPLACEMENT))));
+            assertTrue(indexedCollection.update(Collections.emptySet(), asSet(4, 5), queryOptions(enableFlags(TransactionalIndexedCollection.STRICT_REPLACEMENT))));
             assertEquals(indexedCollection, asSet(1, 2, 3, 4, 5));
         }
     }
@@ -275,8 +275,8 @@ public class TransactionalIndexedCollectionTest extends TestCase {
         assertFalse(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, asIterable(asSet(1, 4, 3)), noQueryOptions()));
         assertFalse(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, asSet(1, 2, 3, 4), noQueryOptions()));
         assertFalse(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, asIterable(asSet(1, 2, 3, 4)), noQueryOptions()));
-        assertTrue(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, Collections.<Integer>emptySet(), noQueryOptions()));
-        assertTrue(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, asIterable(Collections.<Integer>emptySet()), noQueryOptions()));
+        assertTrue(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, Collections.emptySet(), noQueryOptions()));
+        assertTrue(TransactionalIndexedCollection.objectStoreContainsAllIterable(objectStore, asIterable(Collections.emptySet()), noQueryOptions()));
     }
 
     static <O> Iterable<O> asIterable(final Collection<O> collection) {
