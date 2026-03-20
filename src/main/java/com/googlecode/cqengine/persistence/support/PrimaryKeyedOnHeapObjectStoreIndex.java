@@ -16,31 +16,14 @@
 package com.googlecode.cqengine.persistence.support;
 
 import com.googlecode.cqengine.index.Index;
-import com.googlecode.cqengine.index.support.AbstractAttributeIndex;
-import com.googlecode.cqengine.index.support.CloseableIterable;
-import com.googlecode.cqengine.index.support.CloseableIterator;
-import com.googlecode.cqengine.index.support.KeyStatistics;
-import com.googlecode.cqengine.index.support.KeyValue;
-import com.googlecode.cqengine.index.support.KeyValueMaterialized;
-import com.googlecode.cqengine.index.support.SortedKeyStatisticsAttributeIndex;
+import com.googlecode.cqengine.index.support.*;
 import com.googlecode.cqengine.index.support.indextype.OnHeapTypeIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
-import com.googlecode.cqengine.query.simple.Between;
-import com.googlecode.cqengine.query.simple.Equal;
-import com.googlecode.cqengine.query.simple.GreaterThan;
-import com.googlecode.cqengine.query.simple.Has;
-import com.googlecode.cqengine.query.simple.In;
-import com.googlecode.cqengine.query.simple.LessThan;
+import com.googlecode.cqengine.query.simple.*;
 import com.googlecode.cqengine.resultset.ResultSet;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 /**

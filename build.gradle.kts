@@ -1,15 +1,4 @@
 
-import org.gradle.api.file.SourceDirectorySet
-import org.gradle.api.plugins.antlr.AntlrTask
-import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.api.tasks.javadoc.Javadoc
-import org.gradle.api.tasks.testing.Test
-import org.gradle.external.javadoc.StandardJavadocDocletOptions
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
-import org.gradle.testing.jacoco.tasks.JacocoReport
 import java.time.Instant
 import java.util.jar.JarFile
 

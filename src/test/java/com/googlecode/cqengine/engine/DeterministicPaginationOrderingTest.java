@@ -32,14 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.googlecode.cqengine.query.QueryFactory.all;
-import static com.googlecode.cqengine.query.QueryFactory.applyThresholds;
-import static com.googlecode.cqengine.query.QueryFactory.ascending;
-import static com.googlecode.cqengine.query.QueryFactory.descending;
-import static com.googlecode.cqengine.query.QueryFactory.noQueryOptions;
-import static com.googlecode.cqengine.query.QueryFactory.orderBy;
-import static com.googlecode.cqengine.query.QueryFactory.queryOptions;
-import static com.googlecode.cqengine.query.QueryFactory.threshold;
+import static com.googlecode.cqengine.query.QueryFactory.*;
 import static com.googlecode.cqengine.query.option.EngineThresholds.INDEX_ORDERING_SELECTIVITY;
 
 public class DeterministicPaginationOrderingTest {
