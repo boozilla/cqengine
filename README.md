@@ -28,6 +28,13 @@ dependencies {
 
 최신 버전은 [릴리스 노트](https://github.com/boozilla/cqengine/wiki/ReleaseNotes)에서 확인하세요.
 
+## 3.6.2 하이라이트
+
+- primary-keyed persistence는 canonical identity, 기본 primary ascending 조회 순서, deterministic pagination tie-break를 함께 제공합니다.
+- `ReadOnlyPersistence.around(...)`로 기존 persistence를 CQEngine 조회 전용으로 감쌀 수 있습니다.
+- ordering/materialization/query filtering 경로를 정리해 same-machine benchmark 기준 `NonOptimalIndexes`는 `753.779us -> 674.800us`, `NoIndexes`는 `1800.054us -> 1448.942us`까지 낮췄습니다.
+- benchmark runner는 이제 `--task`, `--warmup`, `--measurement` 인자를 지원해 특정 항목만 빠르게 재측정할 수 있습니다.
+
 ## 빌드 요구사항
 
 - Gradle Wrapper(`gradle-9.3.1`) 실행에는 JDK 17 이상이 필요합니다.
@@ -64,7 +71,7 @@ finally {
 
 - [문서 허브(Home)](https://github.com/boozilla/cqengine/wiki/Home)
 - [반복의 한계](https://github.com/boozilla/cqengine/wiki/TheLimitsOfIteration)
-- [벤치마크](https://github.com/boozilla/cqengine/wiki/Benchmark)
+- [벤치마크](https://github.com/boozilla/cqengine/wiki/Benchmark) - same-machine `npgall/cqengine` 비교와 Mermaid 차트 포함
 - [자주 묻는 질문](https://github.com/boozilla/cqengine/wiki/FrequentlyAskedQuestions)
 
 ### 쿼리/전략
