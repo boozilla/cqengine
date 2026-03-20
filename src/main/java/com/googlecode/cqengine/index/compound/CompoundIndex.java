@@ -16,6 +16,7 @@
 package com.googlecode.cqengine.index.compound;
 
 import com.googlecode.cqengine.attribute.Attribute;
+import com.googlecode.cqengine.attribute.SimpleAttribute;
 import com.googlecode.cqengine.index.Index;
 import com.googlecode.cqengine.index.compound.support.CompoundAttribute;
 import com.googlecode.cqengine.index.compound.support.CompoundQuery;
@@ -26,7 +27,9 @@ import com.googlecode.cqengine.quantizer.Quantizer;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.googlecode.cqengine.resultset.common.PrimaryKeyOrderedLookupResultSet;
 import com.googlecode.cqengine.resultset.filter.QuantizedResultSet;
+import com.googlecode.cqengine.resultset.stored.PrimaryKeyOrderedStoredResultSet;
 import com.googlecode.cqengine.resultset.stored.StoredResultSet;
 import com.googlecode.cqengine.resultset.stored.StoredSetBasedResultSet;
 
@@ -54,7 +57,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author Niall Gallagher
  */
-public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundValueTuple<O>, O, ConcurrentMap<CompoundValueTuple<O>, StoredResultSet<O>>> implements KeyStatisticsAttributeIndex<CompoundValueTuple<O>, O>, OnHeapTypeIndex {
+public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundValueTuple<O>, O, ConcurrentMap<CompoundValueTuple<O>, StoredResultSet<O>>> implements KeyStatisticsAttributeIndex<CompoundValueTuple<O>, O>, OnHeapTypeIndex, PrimaryKeyOrderedAttributeIndex<O> {
 
     protected static final int INDEX_RETRIEVAL_COST = 20;
 
@@ -123,6 +126,16 @@ public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundVal
         if (queryClass.equals(CompoundQuery.class)) {
             final CompoundQuery<O> compoundQuery = (CompoundQuery<O>) query;
             final CompoundValueTuple<O> valueTuple = compoundQuery.getCompoundValueTuple();
+            final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = getPrimaryKeyAttributeForValueSets(queryOptions);
+            if (primaryKeyAttribute != null && !isQuantized()) {
+                return new PrimaryKeyOrderedLookupResultSet<O>(compoundQuery, queryOptions, INDEX_RETRIEVAL_COST, primaryKeyAttribute) {
+                    @Override
+                    protected ResultSet<O> lookupResultSet() {
+                        final ResultSet<O> rs = indexMap.get(getQuantizedValue(valueTuple));
+                        return rs == null ? null : filterForQuantization(rs, compoundQuery, queryOptions);
+                    }
+                };
+            }
             return new ResultSet<O>() {
                 @Override
                 public Iterator<O> iterator() {
@@ -195,6 +208,30 @@ public class CompoundIndex<O> extends AbstractMapBasedAttributeIndex<CompoundVal
     @Override
     public CloseableIterable<KeyValue<CompoundValueTuple<O>, O>> getKeysAndValues(QueryOptions queryOptions) {
         return super.getKeysAndValues();
+    }
+
+    @Override
+    protected StoredResultSet<O> createValueSet(QueryOptions queryOptions) {
+        final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = getPrimaryKeyAttributeForValueSets(queryOptions);
+        if (primaryKeyAttribute == null) {
+            return super.createValueSet(queryOptions);
+        }
+        return createPrimaryKeyOrderedStoredResultSet(primaryKeyAttribute);
+    }
+
+    @Override
+    protected boolean supportsPrimaryKeyOrderedValueSets() {
+        return valueSetFactory instanceof DefaultValueSetFactory;
+    }
+
+    @Override
+    public SimpleAttribute<O, ? extends Comparable> getPrimaryKeyAttributeForValueSets(QueryOptions queryOptions) {
+        return super.getPrimaryKeyAttributeForOrderedValueSets(queryOptions);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    StoredResultSet<O> createPrimaryKeyOrderedStoredResultSet(SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute) {
+        return new PrimaryKeyOrderedStoredResultSet(primaryKeyAttribute);
     }
 
     // ---------- Hook methods which can be overridden by subclasses using a Quantizer ----------

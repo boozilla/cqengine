@@ -16,6 +16,7 @@
 package com.googlecode.cqengine.resultset.common;
 
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.googlecode.cqengine.resultset.order.PrimaryKeyOrderedResultSet;
 
 import java.util.*;
 
@@ -83,7 +84,13 @@ public class ResultSets {
      * @return A {@link CostCachingResultSet} as described
      */
     public static <O> ResultSet<O> wrapWithCostCachingIfNecessary(final ResultSet<O> resultSet) {
-        return resultSet instanceof CostCachingResultSet ? resultSet : new CostCachingResultSet<O>(resultSet);
+        if (resultSet instanceof CostCachingResultSet) {
+            return resultSet;
+        }
+        if (resultSet instanceof PrimaryKeyOrderedResultSet) {
+            return new PrimaryKeyOrderedCostCachingResultSet<O>(resultSet);
+        }
+        return new CostCachingResultSet<O>(resultSet);
     }
 
     /**

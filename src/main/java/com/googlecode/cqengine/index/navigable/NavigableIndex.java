@@ -26,9 +26,11 @@ import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.query.simple.*;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.googlecode.cqengine.resultset.common.PrimaryKeyOrderedLookupResultSet;
 import com.googlecode.cqengine.resultset.filter.QuantizedResultSet;
 import com.googlecode.cqengine.resultset.iterator.IteratorUtil;
 import com.googlecode.cqengine.resultset.iterator.UnmodifiableIterator;
+import com.googlecode.cqengine.resultset.stored.PrimaryKeyOrderedStoredResultSet;
 import com.googlecode.cqengine.resultset.stored.StoredResultSet;
 import com.googlecode.cqengine.resultset.stored.StoredSetBasedResultSet;
 
@@ -65,7 +67,7 @@ import static com.googlecode.cqengine.index.support.IndexSupport.deduplicateIfNe
  *
  * @author Niall Gallagher
  */
-public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBasedAttributeIndex<A, O, ConcurrentNavigableMap<A, StoredResultSet<O>>> implements SortedKeyStatisticsAttributeIndex<A, O>, OnHeapTypeIndex {
+public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBasedAttributeIndex<A, O, ConcurrentNavigableMap<A, StoredResultSet<O>>> implements SortedKeyStatisticsAttributeIndex<A, O>, OnHeapTypeIndex, PrimaryKeyOrderedAttributeIndex<O> {
 
     protected static final int INDEX_RETRIEVAL_COST = 40;
 
@@ -205,6 +207,16 @@ public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBased
     }
 
     protected ResultSet<O> retrieveEqual(final Equal<O, A> equal, final QueryOptions queryOptions) {
+        final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = getPrimaryKeyAttributeForValueSets(queryOptions);
+        if (primaryKeyAttribute != null && !isQuantized()) {
+            return new PrimaryKeyOrderedLookupResultSet<O>(equal, queryOptions, INDEX_RETRIEVAL_COST, primaryKeyAttribute) {
+                @Override
+                protected ResultSet<O> lookupResultSet() {
+                    ResultSet<O> rs = indexMap.get(getQuantizedValue(equal.getValue()));
+                    return rs == null ? null : filterForQuantization(rs, equal, queryOptions);
+                }
+            };
+        }
         return new ResultSet<O>() {
             @Override
             public Iterator<O> iterator() {
@@ -444,6 +456,30 @@ public class NavigableIndex<A extends Comparable<A>, O> extends AbstractMapBased
      */
     protected ResultSet<O> filterForQuantization(ResultSet<O> storedResultSet, Query<O> query, QueryOptions queryOptions) {
         return storedResultSet;
+    }
+
+    @Override
+    protected StoredResultSet<O> createValueSet(QueryOptions queryOptions) {
+        final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = getPrimaryKeyAttributeForValueSets(queryOptions);
+        if (primaryKeyAttribute == null) {
+            return super.createValueSet(queryOptions);
+        }
+        return createPrimaryKeyOrderedStoredResultSet(primaryKeyAttribute);
+    }
+
+    @Override
+    protected boolean supportsPrimaryKeyOrderedValueSets() {
+        return valueSetFactory instanceof DefaultValueSetFactory;
+    }
+
+    @Override
+    public SimpleAttribute<O, ? extends Comparable> getPrimaryKeyAttributeForValueSets(QueryOptions queryOptions) {
+        return super.getPrimaryKeyAttributeForOrderedValueSets(queryOptions);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    StoredResultSet<O> createPrimaryKeyOrderedStoredResultSet(SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute) {
+        return new PrimaryKeyOrderedStoredResultSet(primaryKeyAttribute);
     }
 
 

@@ -22,22 +22,22 @@ import com.googlecode.concurrenttrees.suffix.ConcurrentSuffixTree;
 import com.googlecode.concurrenttrees.suffix.SuffixTree;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.SimpleAttribute;
-import com.googlecode.cqengine.attribute.SimpleNullableAttribute;
 import com.googlecode.cqengine.index.Index;
 import com.googlecode.cqengine.index.support.AbstractAttributeIndex;
+import com.googlecode.cqengine.index.support.PrimaryKeyOrderedAttributeIndex;
+import com.googlecode.cqengine.index.support.PrimaryKeyOrderedValueSetResolver;
 import com.googlecode.cqengine.index.support.indextype.OnHeapTypeIndex;
 import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.query.Query;
-import com.googlecode.cqengine.query.option.DeduplicationOption;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.query.simple.Equal;
 import com.googlecode.cqengine.query.simple.In;
 import com.googlecode.cqengine.query.simple.StringContains;
 import com.googlecode.cqengine.query.simple.StringEndsWith;
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.googlecode.cqengine.resultset.connective.ResultSetUnion;
-import com.googlecode.cqengine.resultset.connective.ResultSetUnionAll;
+import com.googlecode.cqengine.resultset.common.PrimaryKeyOrderedLookupResultSet;
+import com.googlecode.cqengine.resultset.stored.PrimaryKeyOrderedStoredResultSet;
 import com.googlecode.cqengine.resultset.stored.StoredResultSet;
 import com.googlecode.cqengine.resultset.stored.StoredSetBasedResultSet;
 
@@ -66,11 +66,12 @@ import static com.googlecode.cqengine.index.support.IndexSupport.deduplicateIfNe
  *
  * @author Niall Gallagher
  */
-public class SuffixTreeIndex<A extends CharSequence, O> extends AbstractAttributeIndex<A, O> implements OnHeapTypeIndex {
+public class SuffixTreeIndex<A extends CharSequence, O> extends AbstractAttributeIndex<A, O> implements OnHeapTypeIndex, PrimaryKeyOrderedAttributeIndex<O> {
 
     private static final int INDEX_RETRIEVAL_COST = 53;
 
     final NodeFactory nodeFactory;
+    final PrimaryKeyOrderedValueSetResolver<O> primaryKeyOrderedValueSetResolver = new PrimaryKeyOrderedValueSetResolver<O>();
     volatile SuffixTree<StoredResultSet<O>> tree;
 
     /**
@@ -249,6 +250,15 @@ public class SuffixTreeIndex<A extends CharSequence, O> extends AbstractAttribut
     }
 
     protected ResultSet<O> retrieveEqual(final Equal<O, A> equal, final QueryOptions queryOptions, final SuffixTree<StoredResultSet<O>> tree) {
+        final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = getPrimaryKeyAttributeForValueSets(queryOptions);
+        if (primaryKeyAttribute != null) {
+            return new PrimaryKeyOrderedLookupResultSet<O>(equal, queryOptions, INDEX_RETRIEVAL_COST, primaryKeyAttribute) {
+                @Override
+                protected ResultSet<O> lookupResultSet() {
+                    return tree.getValueForExactKey(equal.getValue());
+                }
+            };
+        }
         return new ResultSet<O>() {
             @Override
             public Iterator<O> iterator() {
@@ -307,23 +317,7 @@ public class SuffixTreeIndex<A extends CharSequence, O> extends AbstractAttribut
      * @return A union view over the given result sets
      */
     ResultSet<O> unionResultSets(Iterable<? extends ResultSet<O>> results, Query<O> query, QueryOptions queryOptions) {
-        if (DeduplicationOption.isLogicalElimination(queryOptions)
-                && !(getAttribute() instanceof SimpleAttribute || getAttribute() instanceof SimpleNullableAttribute)) {
-            return new ResultSetUnion<O>(results, query, queryOptions) {
-                @Override
-                public int getRetrievalCost() {
-                    return INDEX_RETRIEVAL_COST;
-                }
-            };
-        }
-        else {
-            return new ResultSetUnionAll<O>(results, query, queryOptions) {
-                @Override
-                public int getRetrievalCost() {
-                    return INDEX_RETRIEVAL_COST;
-                }
-            };
-        }
+        return deduplicateIfNecessary(results, query, getAttribute(), queryOptions, INDEX_RETRIEVAL_COST);
     }
 
 
@@ -333,6 +327,24 @@ public class SuffixTreeIndex<A extends CharSequence, O> extends AbstractAttribut
      */
     public StoredResultSet<O> createValueSet() {
         return new StoredSetBasedResultSet<O>(Collections.<O>newSetFromMap(new ConcurrentHashMap<O, Boolean>()));
+    }
+
+    protected StoredResultSet<O> createValueSet(QueryOptions queryOptions) {
+        final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = getPrimaryKeyAttributeForValueSets(queryOptions);
+        if (primaryKeyAttribute == null) {
+            return createValueSet();
+        }
+        return createPrimaryKeyOrderedStoredResultSet(primaryKeyAttribute);
+    }
+
+    @Override
+    public SimpleAttribute<O, ? extends Comparable> getPrimaryKeyAttributeForValueSets(QueryOptions queryOptions) {
+        return primaryKeyOrderedValueSetResolver.getPrimaryKeyAttribute(queryOptions);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    StoredResultSet<O> createPrimaryKeyOrderedStoredResultSet(SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute) {
+        return new PrimaryKeyOrderedStoredResultSet(primaryKeyAttribute);
     }
 
     /**
@@ -351,7 +363,7 @@ public class SuffixTreeIndex<A extends CharSequence, O> extends AbstractAttribut
                     StoredResultSet<O> valueSet = tree.getValueForExactKey(attributeValue);
                     if (valueSet == null) {
                         // No StoredResultSet, create and add one...
-                        valueSet = createValueSet();
+                        valueSet = createValueSet(queryOptions);
                         StoredResultSet<O> existingValueSet = tree.putIfAbsent(attributeValue, valueSet);
                         if (existingValueSet != null) {
                             // Another thread won race to add new value set, use that one...

@@ -17,6 +17,9 @@ package com.googlecode.cqengine.index.support;
 
 import com.googlecode.concurrenttrees.common.LazyIterator;
 import com.googlecode.cqengine.attribute.Attribute;
+import com.googlecode.cqengine.attribute.SimpleAttribute;
+import com.googlecode.cqengine.persistence.Persistence;
+import com.googlecode.cqengine.persistence.onheap.OnHeapPersistence;
 import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.query.Query;
@@ -46,6 +49,8 @@ public abstract class AbstractMapBasedAttributeIndex<A, O, MapType extends Concu
     protected final Factory<StoredResultSet<O>> valueSetFactory;
 
     protected final MapType indexMap;
+    private volatile boolean orderedValueSetPrimaryKeyResolved = false;
+    private volatile SimpleAttribute<O, ? extends Comparable> orderedValueSetPrimaryKeyAttribute = null;
 
     /**
      * Protected constructor, called by subclasses.
@@ -81,7 +86,7 @@ public abstract class AbstractMapBasedAttributeIndex<A, O, MapType extends Concu
                     StoredResultSet<O> valueSet = indexMap.get(attributeValue);
                     if (valueSet == null) {
                         // No StoredResultSet, create and add one...
-                        valueSet = valueSetFactory.create();
+                        valueSet = createValueSet(queryOptions);
                         StoredResultSet<O> existingValueSet = indexMap.putIfAbsent(attributeValue, valueSet);
                         if (existingValueSet != null) {
                             // Another thread won race to add new value set, use that one...
@@ -194,6 +199,35 @@ public abstract class AbstractMapBasedAttributeIndex<A, O, MapType extends Concu
     protected Integer getCountForKey(A key) {
         StoredResultSet<O> objectsForKey = this.indexMap.get(key);
         return objectsForKey == null ? 0 : objectsForKey.size();
+    }
+
+    protected StoredResultSet<O> createValueSet(QueryOptions queryOptions) {
+        return valueSetFactory.create();
+    }
+
+    protected boolean supportsPrimaryKeyOrderedValueSets() {
+        return false;
+    }
+
+    protected SimpleAttribute<O, ? extends Comparable> getPrimaryKeyAttributeForOrderedValueSets(QueryOptions queryOptions) {
+        if (!supportsPrimaryKeyOrderedValueSets()) {
+            return null;
+        }
+        if (orderedValueSetPrimaryKeyResolved) {
+            return orderedValueSetPrimaryKeyAttribute;
+        }
+        @SuppressWarnings("unchecked")
+        final Persistence<O, ? extends Comparable> persistence = (Persistence<O, ? extends Comparable>) queryOptions.get(Persistence.class);
+        if (persistence == null) {
+            return null;
+        }
+        synchronized (this) {
+            if (!orderedValueSetPrimaryKeyResolved) {
+                orderedValueSetPrimaryKeyAttribute = persistence instanceof OnHeapPersistence ? persistence.getPrimaryKeyAttribute() : null;
+                orderedValueSetPrimaryKeyResolved = true;
+            }
+        }
+        return orderedValueSetPrimaryKeyAttribute;
     }
 
 

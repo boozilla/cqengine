@@ -106,6 +106,29 @@ public class DeterministicPaginationOrderingTest {
     }
 
     @Test
+    public void testIndexOrderingPreservesPrimaryKeyOrderAcrossMultipleBuckets() {
+        final IndexedCollection<TestRecord> collection = createPrimaryKeyedCollection();
+        collection.addIndex(NavigableIndex.onAttribute(GROUP));
+        collection.addAll(Arrays.asList(
+                new TestRecord(4, 2, 94),
+                new TestRecord(2, 1, 98),
+                new TestRecord(3, 2, 97),
+                new TestRecord(1, 1, 99)
+        ));
+
+        final ResultSet<TestRecord> resultSet = collection.retrieve(
+                all(TestRecord.class),
+                queryOptions(orderBy(ascending(GROUP)), applyThresholds(threshold(INDEX_ORDERING_SELECTIVITY, 1.0)))
+        );
+        try {
+            Assert.assertEquals(Arrays.asList(1, 2, 3, 4), extractRecordIds(resultSet));
+        }
+        finally {
+            resultSet.close();
+        }
+    }
+
+    @Test
     public void testResolveExplicitOrderByOptionDoesNotDuplicatePrimaryKey() {
         final CollectionQueryEngine<TestRecord> queryEngine = new CollectionQueryEngine<TestRecord>();
         queryEngine.init(emptyPrimaryKeyedObjectStore(), queryOptionsWithPrimaryKeyedPersistence());

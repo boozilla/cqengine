@@ -33,6 +33,7 @@ import com.googlecode.cqengine.query.QueryFactory;
 import com.googlecode.cqengine.query.option.QueryLog;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.googlecode.cqengine.resultset.order.PrimaryKeyOrderedResultSet;
 import com.googlecode.cqengine.testutil.Car;
 import com.googlecode.cqengine.testutil.CarFactory;
 import com.googlecode.cqengine.testutil.IterationCountingSet;
@@ -309,6 +310,58 @@ public class CollectionQueryEngineTest {
         Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: materialize"));
     }
 
+    @Test
+    public void testExplicitPrimaryKeyOrderingUsesIndexForPrimaryKeyEquality() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(
+                and(equal(Car.CAR_ID, 8), equal(Car.COLOR, Car.Color.RED)),
+                queryOptions(orderBy(ascending(Car.CAR_ID)), new QueryLog(queryLogSink))
+        );
+
+        try {
+            Assert.assertEquals(Collections.singletonList(8), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: index"));
+    }
+
+    @Test
+    public void testExplicitPrimaryKeyOrderingUsesBackingIndexForAllResults() {
+        final IndexedCollection<Car> collection = createPrimaryKeyedCollection();
+        final StringBuilder queryLogSink = new StringBuilder();
+        final ResultSet<Car> resultSet = collection.retrieve(all(Car.class), queryOptions(orderBy(ascending(Car.CAR_ID)), new QueryLog(queryLogSink)));
+
+        try {
+            Assert.assertEquals(asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), resultSet.stream().map(Car::getCarId).collect(Collectors.toList()));
+        }
+        finally {
+            resultSet.close();
+        }
+
+        Assert.assertTrue(queryLogSink.toString().contains("orderingStrategy: index"));
+    }
+
+    @Test
+    public void testCreateMaterializedOrderedResultSetSkipsPrimaryKeySortForPrimaryKeyOrderedResultSet() {
+        final CollectionQueryEngine<Car> queryEngine = new CollectionQueryEngine<Car>();
+        queryEngine.init(emptyObjectStore(), queryOptionsWithOnHeapPersistence());
+
+        final ResultSet<Car> orderedResultSet = new TestPrimaryKeyOrderedResultSet(asList(CarFactory.createCar(7), CarFactory.createCar(9)));
+        final ResultSet<Car> materializedResultSet = queryEngine.createMaterializedOrderedResultSet(
+                equal(Car.COLOR, Car.Color.BLUE),
+                noQueryOptions(),
+                orderBy(ascending(Car.CAR_ID)),
+                false,
+                orderedResultSet
+        );
+
+        Assert.assertSame(orderedResultSet, materializedResultSet);
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testRemoveIndex_ArgumentValidation1() {
         CollectionQueryEngine<Car> queryEngine = new CollectionQueryEngine<Car>();
@@ -343,5 +396,63 @@ public class CollectionQueryEngineTest {
                 return false;
             }
         };
+    }
+
+    static class TestPrimaryKeyOrderedResultSet extends ResultSet<Car> implements PrimaryKeyOrderedResultSet<Car> {
+        final List<Car> cars;
+
+        TestPrimaryKeyOrderedResultSet(List<Car> cars) {
+            this.cars = cars;
+        }
+
+        @Override
+        public Iterator<Car> iterator() {
+            return cars.iterator();
+        }
+
+        @Override
+        public boolean contains(Car object) {
+            return cars.contains(object);
+        }
+
+        @Override
+        public boolean matches(Car object) {
+            return contains(object);
+        }
+
+        @Override
+        public Query<Car> getQuery() {
+            return all(Car.class);
+        }
+
+        @Override
+        public QueryOptions getQueryOptions() {
+            return noQueryOptions();
+        }
+
+        @Override
+        public int getRetrievalCost() {
+            return 0;
+        }
+
+        @Override
+        public int getMergeCost() {
+            return cars.size();
+        }
+
+        @Override
+        public int size() {
+            return cars.size();
+        }
+
+        @Override
+        public void close() {
+            // No op.
+        }
+
+        @Override
+        public com.googlecode.cqengine.attribute.SimpleAttribute<Car, ? extends Comparable> getPrimaryKeyAttribute() {
+            return Car.CAR_ID;
+        }
     }
 }

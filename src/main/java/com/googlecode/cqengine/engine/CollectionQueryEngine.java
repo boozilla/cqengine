@@ -35,7 +35,7 @@ import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.persistence.support.ObjectStoreResultSet;
 import com.googlecode.cqengine.persistence.support.PrimaryKeyedOnHeapObjectStore;
-import com.googlecode.cqengine.persistence.support.PrimaryKeyedOnHeapObjectStoreIndex;
+import com.googlecode.cqengine.persistence.support.ReadOnlyObjectStore;
 import com.googlecode.cqengine.persistence.support.sqlite.SQLiteObjectStore;
 import com.googlecode.cqengine.query.ComparativeQuery;
 import com.googlecode.cqengine.query.Query;
@@ -48,6 +48,7 @@ import com.googlecode.cqengine.query.simple.Between;
 import com.googlecode.cqengine.query.simple.Equal;
 import com.googlecode.cqengine.query.simple.GreaterThan;
 import com.googlecode.cqengine.query.simple.LessThan;
+import com.googlecode.cqengine.query.simple.All;
 import com.googlecode.cqengine.query.simple.SimpleQuery;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.googlecode.cqengine.resultset.closeable.CloseableResultSet;
@@ -65,8 +66,10 @@ import com.googlecode.cqengine.resultset.iterator.IteratorUtil;
 import com.googlecode.cqengine.resultset.iterator.UnmodifiableIterator;
 import com.googlecode.cqengine.resultset.order.AttributeOrdersComparator;
 import com.googlecode.cqengine.resultset.order.CostPreservingMaterializedOrderedResultSet;
+import com.googlecode.cqengine.resultset.order.MaterializedSimpleAttributeOrderedResultSet;
 import com.googlecode.cqengine.resultset.order.MaterializedDeduplicatedResultSet;
 import com.googlecode.cqengine.resultset.order.MaterializedOrderedResultSet;
+import com.googlecode.cqengine.resultset.order.PrimaryKeyOrderedResultSet;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,8 +92,12 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
     // A key used to store the root query in the QueryOptions, so it may be accessed by partial indexes...
     public static final String ROOT_QUERY = "ROOT_QUERY";
+    static final String RESOLVED_ORDER_BY_OPTION = "RESOLVED_ORDER_BY_OPTION";
+    static final int PRIMARY_ORDERED_BUCKET_MATERIALIZATION_MAX_DISTINCT_KEYS = 128;
+    static final Object DEFAULT_ORDER_BY_SOURCE = new Object();
 
     private volatile Persistence<O, ? extends Comparable> persistence;
+    private volatile OrderByOption<O> defaultOrderByOption;
     private volatile ObjectStore<O> objectStore;
 
     // Map of attributes to set of indexes on that attribute...
@@ -104,6 +111,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
     private final FallbackIndex<O> fallbackIndex = new FallbackIndex<O>();
     // Updated as indexes are added or removed, this is used by the isMutable() method...
     private final Set<Index<O>> immutableIndexes = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<Index<O>> partialIndexes = Collections.newSetFromMap(new ConcurrentHashMap<Index<O>, Boolean>());
 
     public CollectionQueryEngine() {
     }
@@ -114,18 +122,22 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         @SuppressWarnings("unchecked")
         Persistence<O, ? extends Comparable> persistenceFromQueryOptions = getPersistenceFromQueryOptions(queryOptions);
         this.persistence = persistenceFromQueryOptions;
-        if (objectStore instanceof SQLiteObjectStore) {
+        this.defaultOrderByOption = persistenceFromQueryOptions == null || persistenceFromQueryOptions.getPrimaryKeyAttribute() == null
+                ? null
+                : orderBy(ascending(persistenceFromQueryOptions.getPrimaryKeyAttribute()));
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
+        if (backingObjectStore instanceof SQLiteObjectStore) {
             // If the collection is backed by a SQLiteObjectStore, add the backing index of the SQLiteObjectStore
             // so that it can also be used as a regular index to accelerate queries...
-            SQLiteObjectStore<O, ? extends Comparable<?>> sqLiteObjectStore = (SQLiteObjectStore<O, ? extends Comparable<?>>)objectStore;
+            SQLiteObjectStore<O, ? extends Comparable<?>> sqLiteObjectStore = (SQLiteObjectStore<O, ? extends Comparable<?>>)backingObjectStore;
             SQLiteIdentityIndex<? extends Comparable<?>, O> backingIndex = sqLiteObjectStore.getBackingIndex();
             addIndex(backingIndex, queryOptions);
         }
-        else if (objectStore instanceof PrimaryKeyedOnHeapObjectStore) {
+        else if (backingObjectStore instanceof PrimaryKeyedOnHeapObjectStore) {
             // If the collection is backed by a PrimaryKeyedOnHeapObjectStore, add its lightweight backing index
             // so that default primary-key ordering can stream directly from the skip-list ordering already maintained
             // by the object store.
-            PrimaryKeyedOnHeapObjectStore<O, ? extends Comparable<?>> primaryKeyedObjectStore = (PrimaryKeyedOnHeapObjectStore<O, ? extends Comparable<?>>) objectStore;
+            PrimaryKeyedOnHeapObjectStore<O, ? extends Comparable<?>> primaryKeyedObjectStore = (PrimaryKeyedOnHeapObjectStore<O, ? extends Comparable<?>>) backingObjectStore;
             addIndex(primaryKeyedObjectStore.getBackingIndex(), queryOptions);
         }
 
@@ -134,7 +146,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             public boolean perform(Index<O> index) {
                 queryOptions.put(QueryEngine.class, this);
                 queryOptions.put(Persistence.class, persistence);
-                index.init(objectStore, queryOptions);
+                index.init(backingObjectStore, queryOptions);
                 return true;
             }
         });
@@ -188,6 +200,9 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         if (!index.isMutable()) {
             immutableIndexes.add(index);
         }
+        if (index instanceof PartialIndex) {
+            partialIndexes.add(index);
+        }
     }
 
     /**
@@ -196,6 +211,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
      * @param <A> The type of objects indexed
      */
     <A> void addAttributeIndex(AttributeIndex<A, O> attributeIndex, QueryOptions queryOptions) {
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
         Attribute<O, A> attribute = attributeIndex.getAttribute();
         Set<Index<O>> indexesOnThisAttribute = attributeIndexes.get(attribute);
         if (indexesOnThisAttribute == null) {
@@ -220,7 +236,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         }
         queryOptions.put(QueryEngine.class, this);
         queryOptions.put(Persistence.class, persistence);
-        attributeIndex.init(objectStore, queryOptions);
+        attributeIndex.init(backingObjectStore, queryOptions);
     }
 
 
@@ -231,13 +247,14 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
      * @param standingQuery The query on which the index is based
      */
     void addStandingQueryIndex(Index<O> standingQueryIndex, Query<O> standingQuery, QueryOptions queryOptions) {
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
         Index<O> existingIndex = standingQueryIndexes.putIfAbsent(standingQuery, standingQueryIndex);
         if (existingIndex != null) {
             throw new IllegalStateException("An index has already been added for standing query: " + standingQuery);
         }
         queryOptions.put(QueryEngine.class, this);
         queryOptions.put(Persistence.class, persistence);
-        standingQueryIndex.init(objectStore, queryOptions);
+        standingQueryIndex.init(backingObjectStore, queryOptions);
     }
 
     /**
@@ -246,13 +263,14 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
      * @param compoundAttribute The compound attribute on which the index is based
      */
     void addCompoundIndex(CompoundIndex<O> compoundIndex, CompoundAttribute<O> compoundAttribute, QueryOptions queryOptions) {
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
         CompoundIndex<O> existingIndex = compoundIndexes.putIfAbsent(compoundAttribute, compoundIndex);
         if (existingIndex != null) {
             throw new IllegalStateException("An index has already been added for compound attribute: " + compoundAttribute);
         }
         queryOptions.put(QueryEngine.class, this);
         queryOptions.put(Persistence.class, persistence);
-        compoundIndex.init(objectStore, queryOptions);
+        compoundIndex.init(backingObjectStore, queryOptions);
     }
 
     // -------------------- Methods for removing indexes --------------------
@@ -311,6 +329,9 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         if (removed && !index.isMutable()) {
             // Remove from the set of immutable indexes; this is used by ensureMutable() and the isMutable() method...
             immutableIndexes.remove(index);
+        }
+        if (removed && index instanceof PartialIndex) {
+            partialIndexes.remove(index);
         }
         // Notify the index that it has been removed, so that it can delete underlying storage used if necessary...
         index.destroy(queryOptions);
@@ -483,13 +504,14 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         @SuppressWarnings("unchecked")
         final OrderByOption<O> explicitOrderByOption = (OrderByOption<O>) queryOptions.get(OrderByOption.class);
         final boolean usingDefaultOrderByOption = explicitOrderByOption == null;
-        final OrderByOption<O> orderByOption = usingDefaultOrderByOption ? resolveDefaultOrderByOption() : resolveExplicitOrderByOption(explicitOrderByOption);
-        final boolean usingImplicitPrimaryKeyOrdering = usingDefaultOrderByOption && orderByOption != null;
+        final OrderByOption<O> orderByOption = resolveOrderByOption(queryOptions, explicitOrderByOption, usingDefaultOrderByOption);
 
         // Store the root query in the queryOptions, so that when retrieveRecursive() examines child branches, that
         // both the branch query and the root query will be available to PartialIndexes so they may determine if they
         // can be used to accelerate the overall query...
-        queryOptions.put(ROOT_QUERY, query);
+        if (!partialIndexes.isEmpty()) {
+            queryOptions.put(ROOT_QUERY, query);
+        }
 
         // Log decisions made to the query log, if provided...
         final QueryLog queryLog = queryOptions.get(QueryLog.class); // might be null
@@ -504,16 +526,17 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             @SuppressWarnings("unchecked")
             Attribute<O, Comparable> firstAttribute = (Attribute<O, Comparable>) getAttributeOrderDelegate(firstOrder);
 
+            final boolean orderingByPrimaryKey = isOrderingByPrimaryKey(firstAttribute);
             Double selectivityThreshold = Thresholds.getThreshold(queryOptions, EngineThresholds.INDEX_ORDERING_SELECTIVITY);
-            if (usingImplicitPrimaryKeyOrdering && supportsObjectFiltering(query) && hasBoundsForAttribute(query, firstAttribute)) {
-                // When CQEngine injects primary-key ordering and the query already constrains that key,
+            if (orderingByPrimaryKey && supportsObjectFiltering(query) && hasBoundsForAttribute(query, firstAttribute)) {
+                // When results are ordered by the primary key and the query already constrains that key,
                 // prefer streaming the bounded primary range over materializing and sorting it afterwards.
                 selectivityThreshold = 1.0;
             }
             else if (selectivityThreshold == null) {
                 selectivityThreshold = EngineThresholds.INDEX_ORDERING_SELECTIVITY.getThresholdDefault();
             }
-            if (selectivityThreshold != 0.0) {
+            if (selectivityThreshold != 0.0 || orderingByPrimaryKey) {
                 // Index ordering can be used.
                 // Check if an index is actually available to support it...
                 // Before we check if an index is available to support index ordering, we need to account for the fact
@@ -535,9 +558,6 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
                     // also will be able to retrieve objects which do not have values for the non-SimpleAttribute
                     // efficiently. Now check if an index exists which would allow index ordering...
                     for (Index<O> index : this.getIndexesOnAttribute(firstAttribute)) {
-                        if (!usingImplicitPrimaryKeyOrdering && index instanceof PrimaryKeyedOnHeapObjectStoreIndex) {
-                            continue;
-                        }
                         if (index instanceof SortedKeyStatisticsAttributeIndex && !index.isQuantized()) {
                             indexForOrdering = (SortedKeyStatisticsAttributeIndex<?, O>)index;
                             break;
@@ -619,6 +639,9 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
         // Return the results, ensuring that the close() method will close any resources which were opened...
         // TODO: possibly not necessary to wrap here, as the IndexedCollections also ensure close() is called...
+        if (indexForOrdering == null && queryOptions.get(CloseableRequestResources.class) == null) {
+            return resultSet;
+        }
         return new CloseableResultSet<O>(resultSet, query, queryOptions) {
             @Override
             public void close() {
@@ -629,10 +652,40 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
     }
 
     OrderByOption<O> resolveDefaultOrderByOption() {
-        if (persistence == null || persistence.getPrimaryKeyAttribute() == null) {
-            return null;
+        return defaultOrderByOption;
+    }
+
+    @SuppressWarnings("unchecked")
+    OrderByOption<O> resolveOrderByOption(QueryOptions queryOptions, OrderByOption<O> explicitOrderByOption, boolean usingDefaultOrderByOption) {
+        final Object source = usingDefaultOrderByOption ? DEFAULT_ORDER_BY_SOURCE : explicitOrderByOption;
+        final ResolvedOrderByOptionCache<O> cached = (ResolvedOrderByOptionCache<O>) queryOptions.get(RESOLVED_ORDER_BY_OPTION);
+        if (cached != null && cached.engine == this && cached.source == source) {
+            return cached.orderByOption;
         }
-        return orderBy(ascending(persistence.getPrimaryKeyAttribute()));
+
+        final OrderByOption<O> orderByOption = usingDefaultOrderByOption ? resolveDefaultOrderByOption() : resolveExplicitOrderByOption(explicitOrderByOption);
+        if (orderByOption != null) {
+            queryOptions.put(RESOLVED_ORDER_BY_OPTION, new ResolvedOrderByOptionCache<O>(this, source, orderByOption));
+        }
+        return orderByOption;
+    }
+
+    boolean isOrderingByPrimaryKey(Attribute<O, Comparable> attribute) {
+        return persistence != null
+                && persistence.getPrimaryKeyAttribute() != null
+                && persistence.getPrimaryKeyAttribute().equals(attribute);
+    }
+
+    boolean canReusePrimaryKeyInputOrdering(Query<O> query, List<AttributeOrder<O>> attributeOrders) {
+        if (!(query instanceof All) || persistence == null || persistence.getPrimaryKeyAttribute() == null || attributeOrders.isEmpty()) {
+            return false;
+        }
+        final AttributeOrder<O> lastOrder = attributeOrders.get(attributeOrders.size() - 1);
+        if (lastOrder.isDescending() || !persistence.getPrimaryKeyAttribute().equals(getAttributeOrderDelegate(lastOrder))) {
+            return false;
+        }
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
+        return backingObjectStore instanceof PrimaryKeyedOnHeapObjectStore;
     }
 
     OrderByOption<O> resolveExplicitOrderByOption(OrderByOption<O> explicitOrderByOption) {
@@ -653,6 +706,14 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         return orderBy(deterministicAttributeOrders);
     }
 
+    List<AttributeOrder<O>> determineMaterializedSortOrders(Query<O> query, OrderByOption<O> orderByOption) {
+        final List<AttributeOrder<O>> attributeOrders = orderByOption.getAttributeOrders();
+        if (canReusePrimaryKeyInputOrdering(query, attributeOrders)) {
+            return attributeOrders.subList(0, attributeOrders.size() - 1);
+        }
+        return attributeOrders;
+    }
+
     static <O> boolean containsOrderForAttribute(List<AttributeOrder<O>> attributeOrders, Attribute<O, ? extends Comparable> attribute) {
         for (AttributeOrder<O> attributeOrder : attributeOrders) {
             if (attribute.equals(getAttributeOrderDelegate(attributeOrder))) {
@@ -669,6 +730,18 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             return (Attribute<O, ? extends Comparable>) ((OrderControlAttribute) attribute).getDelegateAttribute();
         }
         return attribute;
+    }
+
+    static class ResolvedOrderByOptionCache<O> {
+        final CollectionQueryEngine<O> engine;
+        final Object source;
+        final OrderByOption<O> orderByOption;
+
+        ResolvedOrderByOptionCache(CollectionQueryEngine<O> engine, Object source, OrderByOption<O> orderByOption) {
+            this.engine = engine;
+            this.source = source;
+            this.orderByOption = orderByOption;
+        }
     }
 
     static <O> boolean supportsObjectFiltering(Query<O> query) {
@@ -709,11 +782,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
 
         // Check if we need to order results...
         if (orderByOption != null) {
-            // Wrap the results in an MaterializedOrderedResultSet.
-            Comparator<O> comparator = new AttributeOrdersComparator<O>(orderByOption.getAttributeOrders(), queryOptions);
-            resultSet = preserveWrappedCosts
-                    ? new CostPreservingMaterializedOrderedResultSet<O>(resultSet, comparator)
-                    : new MaterializedOrderedResultSet<O>(resultSet, comparator);
+            resultSet = createMaterializedOrderedResultSet(query, queryOptions, orderByOption, preserveWrappedCosts, resultSet);
         }
         // Check if we need to deduplicate results (deduplicate using MATERIALIZE rather than LOGICAL_ELIMINATION strategy)...
         if (DeduplicationOption.isMaterialize(queryOptions)) {
@@ -721,6 +790,50 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             resultSet = new MaterializedDeduplicatedResultSet<O>(resultSet);
         }
         return resultSet;
+    }
+
+    ResultSet<O> createMaterializedOrderedResultSet(Query<O> query, QueryOptions queryOptions, OrderByOption<O> orderByOption, boolean preserveWrappedCosts, ResultSet<O> resultSet) {
+        final List<AttributeOrder<O>> materializedSortOrders = determineMaterializedSortOrders(query, orderByOption);
+        if (materializedSortOrders.isEmpty()) {
+            return resultSet;
+        }
+        if (resultSet.getMergeCost() <= 1) {
+            return resultSet;
+        }
+        if (canReusePrimaryKeyOrderedResultSet(resultSet, materializedSortOrders)) {
+            return resultSet;
+        }
+        if (materializedSortOrders.size() == 1) {
+            final AttributeOrder<O> sortOrder = materializedSortOrders.get(0);
+            final Attribute<O, ? extends Comparable> attribute = getAttributeOrderDelegate(sortOrder);
+            if (attribute instanceof SimpleAttribute) {
+                @SuppressWarnings("unchecked")
+                final SimpleAttribute<O, Comparable> simpleAttribute = (SimpleAttribute<O, Comparable>) attribute;
+                return new MaterializedSimpleAttributeOrderedResultSet<O, Comparable>(resultSet, simpleAttribute, queryOptions, sortOrder.isDescending(), preserveWrappedCosts);
+            }
+        }
+        final AttributeOrdersComparator<O> comparator = new AttributeOrdersComparator<O>(
+                materializedSortOrders,
+                queryOptions,
+                materializedSortOrders.size() == orderByOption.getAttributeOrders().size()
+        );
+        return preserveWrappedCosts
+                ? new CostPreservingMaterializedOrderedResultSet<O>(resultSet, comparator)
+                : new MaterializedOrderedResultSet<O>(resultSet, comparator);
+    }
+
+    boolean canReusePrimaryKeyOrderedResultSet(ResultSet<O> resultSet, List<AttributeOrder<O>> sortOrders) {
+        if (sortOrders.size() != 1 || !(resultSet instanceof PrimaryKeyOrderedResultSet)) {
+            return false;
+        }
+        final AttributeOrder<O> sortOrder = sortOrders.get(0);
+        if (sortOrder.isDescending()) {
+            return false;
+        }
+        final Attribute<O, ? extends Comparable> sortAttribute = getAttributeOrderDelegate(sortOrder);
+        @SuppressWarnings("unchecked")
+        final PrimaryKeyOrderedResultSet<O> primaryKeyOrderedResultSet = (PrimaryKeyOrderedResultSet<O>) resultSet;
+        return sortAttribute.equals(primaryKeyOrderedResultSet.getPrimaryKeyAttribute());
     }
 
 
@@ -863,26 +976,103 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         final CloseableResourceGroup closeableResourceGroup = CloseableRequestResources.forQueryOptions(queryOptions).addGroup();
 
         final List<AttributeOrder<O>> sortOrdersForBucket = determineAdditionalSortOrdersForIndexOrdering(allSortOrders, attributeCanHaveMoreThanOneValue, indexForOrdering, queryOptions);
-
-        final CloseableIterator<? extends KeyValue<? extends Comparable<?>, O>> keysAndValuesInRange = getKeysAndValuesInRange(indexForOrdering, rangeBoundsFromQuery, primarySortDescending, queryOptions);
-
-        // Ensure this CloseableIterator gets closed...
-        closeableResourceGroup.add(keysAndValuesInRange);
+        final List<AttributeOrder<O>> effectiveSortOrdersForBucket = canReusePrimaryKeyOrderedIndexBuckets(indexForOrdering, sortOrdersForBucket, queryOptions)
+                ? Collections.<AttributeOrder<O>>emptyList()
+                : sortOrdersForBucket;
 
         final Iterator<O> sorted;
-        if (sortOrdersForBucket.isEmpty()) {
-            sorted = new LazyIterator<O>() {
-                @Override
-                protected O computeNext() {
-                    return keysAndValuesInRange.hasNext() ? keysAndValuesInRange.next().getValue() : endOfData();
-                }
-            };
+        if (canUsePrimaryOrderedBucketMaterialization(query, queryOptions, indexForOrdering, allSortOrders, effectiveSortOrdersForBucket, attributeCanHaveMoreThanOneValue)) {
+            sorted = retrieveWithPrimaryOrderedBucketMaterialization(queryOptions, indexForOrdering, allSortOrders, primarySortDescending, closeableResourceGroup);
         }
         else {
-            sorted = concatenate(groupAndSort(keysAndValuesInRange, new AttributeOrdersComparator<O>(sortOrdersForBucket, queryOptions)));
+            final CloseableIterator<? extends KeyValue<? extends Comparable<?>, O>> keysAndValuesInRange = getKeysAndValuesInRange(indexForOrdering, rangeBoundsFromQuery, primarySortDescending, queryOptions);
+
+            // Ensure this CloseableIterator gets closed...
+            closeableResourceGroup.add(keysAndValuesInRange);
+
+            if (effectiveSortOrdersForBucket.isEmpty()) {
+                sorted = new LazyIterator<O>() {
+                    @Override
+                    protected O computeNext() {
+                        return keysAndValuesInRange.hasNext() ? keysAndValuesInRange.next().getValue() : endOfData();
+                    }
+                };
+            }
+            else {
+                sorted = concatenate(groupAndSort(keysAndValuesInRange, new AttributeOrdersComparator<O>(effectiveSortOrdersForBucket, queryOptions)));
+            }
         }
 
         return filterIndexOrderingCandidateResults(sorted, query, queryOptions);
+    }
+
+    boolean canUsePrimaryOrderedBucketMaterialization(Query<O> query, QueryOptions queryOptions, SortedKeyStatisticsIndex<?, O> indexForOrdering, List<AttributeOrder<O>> allSortOrders, List<AttributeOrder<O>> sortOrdersForBucket, boolean attributeCanHaveMoreThanOneValue) {
+        if (!(query instanceof All) || attributeCanHaveMoreThanOneValue || sortOrdersForBucket.size() != 1) {
+            return false;
+        }
+        if (persistence == null || persistence.getPrimaryKeyAttribute() == null || indexForOrdering.getCountOfDistinctKeys(queryOptions) > PRIMARY_ORDERED_BUCKET_MATERIALIZATION_MAX_DISTINCT_KEYS) {
+            return false;
+        }
+        final AttributeOrder<O> bucketSortOrder = sortOrdersForBucket.get(0);
+        if (bucketSortOrder.isDescending() || !persistence.getPrimaryKeyAttribute().equals(getAttributeOrderDelegate(bucketSortOrder))) {
+            return false;
+        }
+        return getPrimaryOrderedBucketMaterializationAttribute(allSortOrders) != null;
+    }
+
+    boolean canReusePrimaryKeyOrderedIndexBuckets(Index<O> index, List<AttributeOrder<O>> sortOrdersForBucket, QueryOptions queryOptions) {
+        if (sortOrdersForBucket.size() != 1 || !(index instanceof PrimaryKeyOrderedAttributeIndex)) {
+            return false;
+        }
+        final AttributeOrder<O> sortOrder = sortOrdersForBucket.get(0);
+        if (sortOrder.isDescending()) {
+            return false;
+        }
+        final Attribute<O, ? extends Comparable> sortAttribute = getAttributeOrderDelegate(sortOrder);
+        @SuppressWarnings("unchecked")
+        final PrimaryKeyOrderedAttributeIndex<O> primaryKeyOrderedIndex = (PrimaryKeyOrderedAttributeIndex<O>) index;
+        final Attribute<O, ? extends Comparable> primaryKeyAttribute = primaryKeyOrderedIndex.getPrimaryKeyAttributeForValueSets(queryOptions);
+        return primaryKeyAttribute != null && sortAttribute.equals(primaryKeyAttribute);
+    }
+
+    Iterator<O> retrieveWithPrimaryOrderedBucketMaterialization(QueryOptions queryOptions, SortedKeyStatisticsIndex<?, O> indexForOrdering, List<AttributeOrder<O>> allSortOrders, boolean primarySortDescending, CloseableResourceGroup closeableResourceGroup) {
+        final SimpleAttribute<O, ? extends Comparable> bucketAttribute = getPrimaryOrderedBucketMaterializationAttribute(allSortOrders);
+        final LinkedHashMap<Comparable<?>, List<O>> buckets = new LinkedHashMap<Comparable<?>, List<O>>();
+
+        final CloseableIterator<? extends Comparable<?>> distinctKeys = primarySortDescending
+                ? indexForOrdering.getDistinctKeysDescending(queryOptions).iterator()
+                : indexForOrdering.getDistinctKeys(queryOptions).iterator();
+        closeableResourceGroup.add(distinctKeys);
+        while (distinctKeys.hasNext()) {
+            buckets.put(distinctKeys.next(), new ArrayList<O>());
+        }
+
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
+        final CloseableIterator<O> primaryOrderedObjects = backingObjectStore.iterator(queryOptions);
+        closeableResourceGroup.add(primaryOrderedObjects);
+        while (primaryOrderedObjects.hasNext()) {
+            final O object = primaryOrderedObjects.next();
+            final List<O> bucket = buckets.get(bucketAttribute.getValue(object, queryOptions));
+            if (bucket != null) {
+                bucket.add(object);
+            }
+        }
+
+        return concatenate(buckets.values().iterator());
+    }
+
+    SimpleAttribute<O, ? extends Comparable> getPrimaryOrderedBucketMaterializationAttribute(List<AttributeOrder<O>> allSortOrders) {
+        final Attribute<O, ? extends Comparable> attribute = getAttributeOrderDelegate(allSortOrders.get(0));
+        if (!(attribute instanceof SimpleAttribute)) {
+            return null;
+        }
+        final ObjectStore<O> backingObjectStore = ReadOnlyObjectStore.unwrap(objectStore);
+        if (!(backingObjectStore instanceof PrimaryKeyedOnHeapObjectStore)) {
+            return null;
+        }
+        @SuppressWarnings("unchecked")
+        final SimpleAttribute<O, ? extends Comparable> simpleAttribute = (SimpleAttribute<O, ? extends Comparable>) attribute;
+        return simpleAttribute;
     }
 
     Iterator<O> retrieveWithIndexOrderingMissingResults(final Query<O> query, QueryOptions queryOptions, Attribute<O, Comparable> primarySortAttribute, List<AttributeOrder<O>> allSortOrders, boolean attributeCanHaveMoreThanOneValue) {

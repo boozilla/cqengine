@@ -19,6 +19,7 @@ import com.googlecode.cqengine.index.Index;
 import com.googlecode.cqengine.index.sqlite.support.DBUtils;
 import com.googlecode.cqengine.persistence.Persistence;
 import com.googlecode.cqengine.persistence.composite.CompositePersistence;
+import com.googlecode.cqengine.persistence.wrapping.ReadOnlyPersistence;
 import com.googlecode.cqengine.query.option.QueryOptions;
 
 import java.io.Closeable;
@@ -88,14 +89,16 @@ public class RequestScopeConnectionManager implements ConnectionManager, Closeab
 
     @SuppressWarnings("unchecked")
     SQLitePersistence getPersistenceForIndex(Index<?> index) {
-        if (persistence instanceof SQLitePersistence) {
-            if (persistence.supportsIndex((Index)index)) {
-                return (SQLitePersistence) persistence;
+        final Persistence<?, ?> backingPersistence = ReadOnlyPersistence.unwrap((Persistence) persistence);
+        if (backingPersistence instanceof SQLitePersistence) {
+            if (backingPersistence.supportsIndex((Index)index)) {
+                return (SQLitePersistence) backingPersistence;
             }
         }
-        else if (persistence instanceof CompositePersistence) {
-            CompositePersistence compositePersistence = ((CompositePersistence) persistence);
+        else if (backingPersistence instanceof CompositePersistence) {
+            CompositePersistence compositePersistence = ((CompositePersistence) backingPersistence);
             Persistence indexPersistence = compositePersistence.getPersistenceForIndex(index);
+            indexPersistence = ReadOnlyPersistence.unwrap(indexPersistence);
             if (indexPersistence instanceof SQLitePersistence) {
                 return (SQLitePersistence) indexPersistence;
             }

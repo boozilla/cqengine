@@ -16,9 +16,12 @@
 package com.googlecode.cqengine.resultset.iterator;
 
 import com.googlecode.concurrenttrees.common.LazyIterator;
+import com.googlecode.cqengine.attribute.SimpleAttribute;
 import com.googlecode.cqengine.index.support.KeyValue;
 import com.googlecode.cqengine.index.support.KeyValueMaterialized;
+import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.filter.MaterializedDeduplicatedIterator;
+import com.googlecode.cqengine.resultset.order.AttributeOrdersComparator;
 
 import java.util.*;
 
@@ -26,6 +29,8 @@ import java.util.*;
  * @author Niall Gallagher
  */
 public class IteratorUtil {
+
+    static final int DIRECT_SIMPLE_ATTRIBUTE_SORT_MAX_SIZE = 128;
 
     public static <O> boolean iterableContains(Iterable<O> iterable, O element) {
         for (O contained : iterable) {
@@ -152,33 +157,109 @@ public class IteratorUtil {
     public static <O> Iterator<Set<O>> groupAndSort(final Iterator<? extends KeyValue<?, O>> values, final Comparator<O> comparator) {
         return new LazyIterator<Set<O>>() {
             final Iterator<? extends KeyValue<?, O>> valuesIterator = values;
-            Set<O> currentGroup = new TreeSet<O>(comparator);
+            List<O> currentGroup = null;
             Object currentKey = null;
+            boolean groupStarted = false;
 
             @Override
             protected Set<O> computeNext() {
 
                 while (valuesIterator.hasNext()) {
-                    KeyValue<?, O> next = valuesIterator.next();
-                    if (!next.getKey().equals(currentKey)) {
-                        Set<O> result = currentGroup;
+                    final KeyValue<?, O> next = valuesIterator.next();
+                    if (!groupStarted) {
                         currentKey = next.getKey();
-                        currentGroup = new TreeSet<O>(comparator);
+                        currentGroup = new ArrayList<O>(16);
+                        currentGroup.add(next.getValue());
+                        groupStarted = true;
+                        continue;
+                    }
+                    if (!next.getKey().equals(currentKey)) {
+                        final Set<O> result = sortedGroup(currentGroup, comparator);
+                        currentKey = next.getKey();
+                        currentGroup = new ArrayList<O>(16);
                         currentGroup.add(next.getValue());
                         return result;
                     }
                     currentGroup.add(next.getValue());
                 }
-                if (currentGroup.isEmpty()) {
+                if (!groupStarted) {
                     return endOfData();
                 }
-                else {
-                    Set<O> result = currentGroup;
-                    currentGroup = new TreeSet<O>(comparator);
-                    return result;
-                }
+                final Set<O> result = sortedGroup(currentGroup, comparator);
+                currentGroup = null;
+                currentKey = null;
+                groupStarted = false;
+                return result;
             }
         };
+    }
+
+    static <O> Set<O> sortedGroup(List<O> currentGroup, Comparator<O> comparator) {
+        if (currentGroup.isEmpty()) {
+            return Collections.emptySet();
+        }
+        if (currentGroup.size() > 1) {
+            if (comparator instanceof AttributeOrdersComparator) {
+                currentGroup = ((AttributeOrdersComparator<O>) comparator).sortAndDeduplicate(currentGroup);
+            }
+            else {
+                currentGroup.sort(comparator);
+                currentGroup = deduplicateSortedGroup(currentGroup, comparator);
+            }
+        }
+        return new ComparatorBackedSet<O>(currentGroup, comparator);
+    }
+
+    static <O> List<O> deduplicateSortedGroup(List<O> sortedGroup, Comparator<O> comparator) {
+        O previous = sortedGroup.get(0);
+        for (int i = 1; i < sortedGroup.size(); i++) {
+            final O current = sortedGroup.get(i);
+            if (comparator.compare(previous, current) == 0) {
+                final List<O> deduplicated = new ArrayList<O>(sortedGroup.size());
+                deduplicated.addAll(sortedGroup.subList(0, i));
+                for (int j = i + 1; j < sortedGroup.size(); j++) {
+                    final O candidate = sortedGroup.get(j);
+                    if (comparator.compare(previous, candidate) != 0) {
+                        deduplicated.add(candidate);
+                        previous = candidate;
+                    }
+                }
+                return deduplicated;
+            }
+            previous = current;
+        }
+        return sortedGroup;
+    }
+
+    static class ComparatorBackedSet<O> extends AbstractSet<O> {
+        final List<O> values;
+        final Comparator<O> comparator;
+
+        ComparatorBackedSet(List<O> values, Comparator<O> comparator) {
+            this.values = values;
+            this.comparator = comparator;
+        }
+
+        @Override
+        public Iterator<O> iterator() {
+            return wrapAsUnmodifiable(values.iterator());
+        }
+
+        @Override
+        public int size() {
+            return values.size();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean contains(Object o) {
+            try {
+                return Collections.binarySearch(values, (O) o, comparator) >= 0;
+            }
+            catch (ClassCastException e) {
+                return false;
+            }
+        }
     }
 
     /**
@@ -197,12 +278,62 @@ public class IteratorUtil {
      * @return An iterator which returns the objects in sorted order
      */
     public static <O> Iterator<O> materializedSort(Iterator<O> unsortedIterator, Comparator<O> comparator) {
-        final List<O> result = new ArrayList<>();
+        final List<O> result = new ArrayList<O>();
         while (unsortedIterator.hasNext()) {
             result.add(unsortedIterator.next());
         }
-        result.sort(comparator);
+        if (comparator instanceof AttributeOrdersComparator) {
+            ((AttributeOrdersComparator<O>) comparator).sort(result);
+        }
+        else {
+            result.sort(comparator);
+        }
         return result.iterator();
+    }
+
+    public static <O, A extends Comparable> Iterator<O> materializedSortBySimpleAttribute(Iterator<O> unsortedIterator, SimpleAttribute<O, A> attribute, QueryOptions queryOptions, boolean descending) {
+        final List<O> values = new ArrayList<O>();
+        while (unsortedIterator.hasNext()) {
+            values.add(unsortedIterator.next());
+        }
+        if (values.size() <= DIRECT_SIMPLE_ATTRIBUTE_SORT_MAX_SIZE) {
+            values.sort(simpleAttributeComparator(attribute, queryOptions, descending));
+            return values.iterator();
+        }
+
+        final List<AttributeKeyValue<O, A>> result = new ArrayList<AttributeKeyValue<O, A>>(values.size());
+        for (final O object : values) {
+            result.add(new AttributeKeyValue<O, A>(attribute.getValue(object, queryOptions), object));
+        }
+        result.sort(descending ? DESCENDING_SIMPLE_ATTRIBUTE_ORDER : ASCENDING_SIMPLE_ATTRIBUTE_ORDER);
+        return new Iterator<O>() {
+            final Iterator<AttributeKeyValue<O, A>> iterator = result.iterator();
+
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public O next() {
+                return iterator.next().value;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    static <O, A extends Comparable> Comparator<O> simpleAttributeComparator(final SimpleAttribute<O, A> attribute, final QueryOptions queryOptions, final boolean descending) {
+        return new Comparator<O>() {
+            @Override
+            public int compare(O left, O right) {
+                final int comparison = compareComparableValues(attribute.getValue(left, queryOptions), attribute.getValue(right, queryOptions));
+                return descending ? comparison * -1 : comparison;
+            }
+        };
     }
 
     /**
@@ -211,5 +342,34 @@ public class IteratorUtil {
      */
     public static <O> Iterator<O> materializedDeduplicate(Iterator<O> iterator) {
         return new MaterializedDeduplicatedIterator<O>(iterator);
+    }
+
+    static final Comparator<AttributeKeyValue<?, ? extends Comparable>> ASCENDING_SIMPLE_ATTRIBUTE_ORDER = new Comparator<AttributeKeyValue<?, ? extends Comparable>>() {
+        @Override
+        public int compare(AttributeKeyValue<?, ? extends Comparable> left, AttributeKeyValue<?, ? extends Comparable> right) {
+            return compareComparableValues(left.key, right.key);
+        }
+    };
+
+    static final Comparator<AttributeKeyValue<?, ? extends Comparable>> DESCENDING_SIMPLE_ATTRIBUTE_ORDER = new Comparator<AttributeKeyValue<?, ? extends Comparable>>() {
+        @Override
+        public int compare(AttributeKeyValue<?, ? extends Comparable> left, AttributeKeyValue<?, ? extends Comparable> right) {
+            return compareComparableValues(right.key, left.key);
+        }
+    };
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static int compareComparableValues(Comparable left, Comparable right) {
+        return left.compareTo(right);
+    }
+
+    static class AttributeKeyValue<O, A extends Comparable> {
+        final A key;
+        final O value;
+
+        AttributeKeyValue(A key, O value) {
+            this.key = key;
+            this.value = value;
+        }
     }
 }

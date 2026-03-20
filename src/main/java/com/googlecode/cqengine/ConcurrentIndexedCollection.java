@@ -28,6 +28,7 @@ import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.persistence.support.ObjectStoreAsSet;
 import com.googlecode.cqengine.persistence.support.PersistenceFlags;
 import com.googlecode.cqengine.persistence.support.PrimaryKeyedObjectStore;
+import com.googlecode.cqengine.persistence.wrapping.ReadOnlyPersistence;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.FlagsEnabled;
 import com.googlecode.cqengine.query.option.QueryOptions;
@@ -69,6 +70,8 @@ import static java.util.Collections.singleton;
 public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
 
     protected final Persistence<O, ?> persistence;
+    protected final Persistence<O, ?> effectivePersistence;
+    protected final boolean persistenceRequiresReadRequestFlag;
     protected final ObjectStore<O> objectStore;
     protected final QueryEngineInternal<O> indexEngine;
     protected final MetadataEngine<O> metadataEngine;
@@ -90,6 +93,8 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
      */
     public ConcurrentIndexedCollection(Persistence<O, ? extends Comparable> persistence) {
         this.persistence = persistence;
+        this.effectivePersistence = ReadOnlyPersistence.unwrap(persistence);
+        this.persistenceRequiresReadRequestFlag = !(effectivePersistence instanceof OnHeapPersistence);
         this.objectStore = persistence.createObjectStore();
         QueryEngineInternal<O> queryEngine = new CollectionQueryEngine<O>();
         QueryOptions queryOptions = openRequestScopeResourcesIfNecessary(null);
@@ -136,8 +141,13 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
     @Override
     public ResultSet<O> retrieve(Query<O> query, QueryOptions queryOptions) {
         final QueryOptions finalQueryOptions = openRequestScopeResourcesIfNecessary(queryOptions);
-        flagAsReadRequest(finalQueryOptions);
+        if (persistenceRequiresReadRequestFlag) {
+            flagAsReadRequest(finalQueryOptions);
+        }
         ResultSet<O> results = indexEngine.retrieve(query, finalQueryOptions);
+        if (!persistenceRequiresReadRequestFlag) {
+            return results;
+        }
         return new CloseableResultSet<O>(results, query, finalQueryOptions) {
             @Override
             public void close() {
@@ -555,15 +565,17 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
         if (queryOptions == null) {
             queryOptions = new QueryOptions();
         }
-        if (!(persistence instanceof OnHeapPersistence)) {
+        if (!(effectivePersistence instanceof OnHeapPersistence)) {
             persistence.openRequestScopeResources(queryOptions);
         }
-        queryOptions.put(Persistence.class, persistence);
+        if (queryOptions.get(Persistence.class) != effectivePersistence) {
+            queryOptions.put(Persistence.class, effectivePersistence);
+        }
         return queryOptions;
     }
 
     protected void closeRequestScopeResourcesIfNecessary(QueryOptions queryOptions) {
-        if (!(persistence instanceof OnHeapPersistence)) {
+        if (!(effectivePersistence instanceof OnHeapPersistence)) {
             persistence.closeRequestScopeResources(queryOptions);
         }
     }
