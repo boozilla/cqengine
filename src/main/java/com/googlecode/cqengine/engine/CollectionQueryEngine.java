@@ -34,6 +34,7 @@ import com.googlecode.cqengine.persistence.Persistence;
 import com.googlecode.cqengine.persistence.support.ObjectSet;
 import com.googlecode.cqengine.persistence.support.ObjectStore;
 import com.googlecode.cqengine.persistence.support.ObjectStoreResultSet;
+import com.googlecode.cqengine.persistence.support.PrimaryKeyedOnHeapObjectStore;
 import com.googlecode.cqengine.persistence.support.sqlite.SQLiteObjectStore;
 import com.googlecode.cqengine.query.ComparativeQuery;
 import com.googlecode.cqengine.query.Query;
@@ -117,6 +118,13 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             SQLiteObjectStore<O, ? extends Comparable<?>> sqLiteObjectStore = (SQLiteObjectStore<O, ? extends Comparable<?>>)objectStore;
             SQLiteIdentityIndex<? extends Comparable<?>, O> backingIndex = sqLiteObjectStore.getBackingIndex();
             addIndex(backingIndex, queryOptions);
+        }
+        else if (objectStore instanceof PrimaryKeyedOnHeapObjectStore) {
+            // If the collection is backed by a PrimaryKeyedOnHeapObjectStore, add its lightweight backing index
+            // so that default primary-key ordering can stream directly from the skip-list ordering already maintained
+            // by the object store.
+            PrimaryKeyedOnHeapObjectStore<O, ? extends Comparable<?>> primaryKeyedObjectStore = (PrimaryKeyedOnHeapObjectStore<O, ? extends Comparable<?>>) objectStore;
+            addIndex(primaryKeyedObjectStore.getBackingIndex(), queryOptions);
         }
 
         forEachIndexDo(new IndexOperation<O>() {
@@ -474,6 +482,7 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
         final OrderByOption<O> explicitOrderByOption = (OrderByOption<O>) queryOptions.get(OrderByOption.class);
         final boolean usingDefaultOrderByOption = explicitOrderByOption == null;
         final OrderByOption<O> orderByOption = usingDefaultOrderByOption ? resolveDefaultOrderByOption() : explicitOrderByOption;
+        final boolean usingImplicitPrimaryKeyOrdering = usingDefaultOrderByOption && orderByOption != null;
 
         // Store the root query in the queryOptions, so that when retrieveRecursive() examines child branches, that
         // both the branch query and the root query will be available to PartialIndexes so they may determine if they
@@ -489,7 +498,12 @@ public class CollectionQueryEngine<O> implements QueryEngineInternal<O> {
             // results, or if we should retrieve results and sort them afterwards instead.
 
             Double selectivityThreshold = Thresholds.getThreshold(queryOptions, EngineThresholds.INDEX_ORDERING_SELECTIVITY);
-            if (selectivityThreshold == null) {
+            if (usingImplicitPrimaryKeyOrdering) {
+                // Avoid per-query materialized sorting when CQEngine injects the default primary-key ordering.
+                // If an ordered backing index exists, prefer streaming from it directly and filtering candidates.
+                selectivityThreshold = 1.0;
+            }
+            else if (selectivityThreshold == null) {
                 selectivityThreshold = EngineThresholds.INDEX_ORDERING_SELECTIVITY.getThresholdDefault();
             }
             final List<AttributeOrder<O>> allSortOrders = orderByOption.getAttributeOrders();

@@ -37,14 +37,20 @@ public class PrimaryKeyedOnHeapObjectStore<O, A extends Comparable<A>> implement
 
     final SimpleAttribute<O, A> primaryKeyAttribute;
     final ConcurrentNavigableMap<A, O> backingMap = new ConcurrentSkipListMap<A, O>();
+    final PrimaryKeyedOnHeapObjectStoreIndex<O, A> backingIndex;
 
     public PrimaryKeyedOnHeapObjectStore(SimpleAttribute<O, A> primaryKeyAttribute) {
         this.primaryKeyAttribute = primaryKeyAttribute;
+        this.backingIndex = new PrimaryKeyedOnHeapObjectStoreIndex<O, A>(this);
     }
 
     @Override
     public SimpleAttribute<O, A> getPrimaryKeyAttribute() {
         return primaryKeyAttribute;
+    }
+
+    public PrimaryKeyedOnHeapObjectStoreIndex<O, A> getBackingIndex() {
+        return backingIndex;
     }
 
     @Override
