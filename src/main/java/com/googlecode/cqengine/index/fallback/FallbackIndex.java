@@ -120,6 +120,12 @@ public class FallbackIndex<O> implements Index<O> {
             }
             @Override
             public boolean contains(O object) {
+                if (query instanceof All) {
+                    return objectStore.contains(object, queryOptions);
+                }
+                if (query instanceof None) {
+                    return false;
+                }
                 if (query instanceof ComparativeQuery) {
                     // Contains is based on objects contained in this *filtered* ResultSet, so delegate to iterator...
                     return IteratorUtil.iterableContains(this, object);
@@ -154,6 +160,12 @@ public class FallbackIndex<O> implements Index<O> {
             }
             @Override
             public boolean matches(O object) {
+                if (query instanceof All) {
+                    return true;
+                }
+                if (query instanceof None) {
+                    return false;
+                }
                 return query instanceof ComparativeQuery ? contains(object) : objectMatcher.matches(object);
             }
             @Override
