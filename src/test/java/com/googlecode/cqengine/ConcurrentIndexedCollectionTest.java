@@ -23,9 +23,13 @@ import com.googlecode.cqengine.index.Index;
 import com.googlecode.cqengine.index.hash.HashIndex;
 import com.googlecode.cqengine.persistence.offheap.OffHeapPersistence;
 import com.googlecode.cqengine.persistence.onheap.OnHeapPersistence;
+import com.googlecode.cqengine.persistence.wrapping.WrappingPersistence;
 import com.googlecode.cqengine.query.QueryFactory;
+import com.googlecode.cqengine.query.option.QueryOptions;
+import com.googlecode.cqengine.resultset.common.NonUniqueObjectException;
 import com.googlecode.cqengine.resultset.iterator.IteratorUtil;
 import com.googlecode.cqengine.testutil.Car;
+import com.googlecode.cqengine.testutil.CarFactory;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.junit.Assert;
@@ -100,6 +104,53 @@ public class ConcurrentIndexedCollectionTest extends TestCase {
 
         Assert.assertTrue(indexedCollection.update(asList("c", "e"), Collections.emptyList()));
         Assert.assertEquals(setOf("d"), indexedCollection);
+    }
+
+    public void testGetByPrimaryKey()
+    {
+        ConcurrentIndexedCollection<Car> indexedCollection = new ConcurrentIndexedCollection<Car>(OnHeapPersistence.onPrimaryKey(Car.CAR_ID));
+        indexedCollection.addAll(CarFactory.createCollectionOfCars(3));
+
+        Assert.assertEquals(1, indexedCollection.getByPrimaryKey(1).getCarId());
+        Assert.assertNull(indexedCollection.getByPrimaryKey(99));
+
+        QueryOptions queryOptions = noQueryOptions();
+        Assert.assertEquals(2, indexedCollection.getByPrimaryKey(2, queryOptions).getCarId());
+    }
+
+    public void testGetByPrimaryKey_WithoutPrimaryKey()
+    {
+        ConcurrentIndexedCollection<Car> indexedCollection = new ConcurrentIndexedCollection<Car>();
+
+        try
+        {
+            indexedCollection.getByPrimaryKey(1);
+            Assert.fail("Expected IllegalStateException");
+        }
+        catch(IllegalStateException expected)
+        {
+            // expected
+        }
+    }
+
+    public void testGetByPrimaryKey_NonUniqueResult()
+    {
+        Collection<Car> backingCollection = new ArrayList<Car>();
+        backingCollection.add(CarFactory.createCar(1));
+        backingCollection.add(CarFactory.createCar(1));
+        ConcurrentIndexedCollection<Car> indexedCollection = new ConcurrentIndexedCollection<Car>(
+                WrappingPersistence.aroundCollectionOnPrimaryKey(backingCollection, Car.CAR_ID)
+        );
+
+        try
+        {
+            indexedCollection.getByPrimaryKey(1);
+            Assert.fail("Expected NonUniqueObjectException");
+        }
+        catch(NonUniqueObjectException expected)
+        {
+            // expected
+        }
     }
 
     public void testUpdate_IterableArguments() {

@@ -15,6 +15,7 @@
  */
 package com.googlecode.cqengine;
 
+import com.googlecode.cqengine.attribute.SimpleAttribute;
 import com.googlecode.cqengine.engine.CollectionQueryEngine;
 import com.googlecode.cqengine.engine.QueryEngineInternal;
 import com.googlecode.cqengine.index.Index;
@@ -30,11 +31,14 @@ import com.googlecode.cqengine.query.option.FlagsEnabled;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.googlecode.cqengine.resultset.closeable.CloseableResultSet;
+import com.googlecode.cqengine.resultset.common.NonUniqueObjectException;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Set;
 
+import static com.googlecode.cqengine.query.QueryFactory.equal;
 import static java.util.Collections.singleton;
 
 /**
@@ -151,6 +155,53 @@ public class ConcurrentIndexedCollection<O> implements IndexedCollection<O> {
                 closeRequestScopeResourcesIfNecessary(finalQueryOptions);
             }
         };
+    }
+
+    /**
+     * Retrieves a single object by the primary key configured on this collection's persistence.
+     *
+     * @param primaryKey The primary key value to look up
+     * @return The object with the given primary key, or null if no object exists with that key
+     * @throws IllegalStateException    If this collection's persistence has no primary key configured
+     * @throws NonUniqueObjectException If more than one object is found for the primary key
+     */
+    public O getByPrimaryKey(Object primaryKey)
+    {
+        return getByPrimaryKey(primaryKey, null);
+    }
+
+    /**
+     * Retrieves a single object by the primary key configured on this collection's persistence.
+     *
+     * @param primaryKey   The primary key value to look up
+     * @param queryOptions Optional parameters for the query
+     * @return The object with the given primary key, or null if no object exists with that key
+     * @throws IllegalStateException    If this collection's persistence has no primary key configured
+     * @throws NonUniqueObjectException If more than one object is found for the primary key
+     */
+    public O getByPrimaryKey(Object primaryKey, QueryOptions queryOptions)
+    {
+        final SimpleAttribute<O, ? extends Comparable> primaryKeyAttribute = effectivePersistence.getPrimaryKeyAttribute();
+        if(primaryKeyAttribute == null)
+        {
+            throw new IllegalStateException("The collection persistence is not configured with a primary key attribute.");
+        }
+
+        @SuppressWarnings({"unchecked", "rawtypes"}) final Query<O> primaryKeyQuery = equal((SimpleAttribute) primaryKeyAttribute, primaryKey);
+        try(ResultSet<O> resultSet = retrieve(primaryKeyQuery, queryOptions))
+        {
+            final Iterator<O> iterator = resultSet.iterator();
+            if(!iterator.hasNext())
+            {
+                return null;
+            }
+            final O result = iterator.next();
+            if(iterator.hasNext())
+            {
+                throw new NonUniqueObjectException("ResultSet contains more than one object");
+            }
+            return result;
+        }
     }
 
     /**
