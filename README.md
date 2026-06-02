@@ -22,18 +22,19 @@ CQEngine은 Java 컬렉션을 SQL 유사 방식으로 질의할 수 있게 해�
 
 ```kotlin
 dependencies {
-    implementation("io.github.boozilla:cqengine:3.6.2")
+    implementation("io.github.boozilla:cqengine:3.6.3")
 }
 ```
 
 최신 버전은 [릴리스 노트](https://github.com/boozilla/cqengine/wiki/ReleaseNotes)에서 확인하세요.
 
-## 3.6.2 하이라이트
+## 3.6.3 하이라이트
 
+- `ConcurrentIndexedCollection#getByPrimaryKey(...)` API를 추가해 primary-keyed persistence에서 단일 객체를 직접 조회할 수 있습니다.
+- primary key가 설정되지 않은 컬렉션에서는 `getByPrimaryKey(...)`가 명확한 `IllegalStateException`을 던집니다.
+- 동일 primary key로 둘 이상의 객체가 조회되면 `NonUniqueObjectException`으로 데이터 불일치를 드러냅니다.
 - primary-keyed persistence는 canonical identity, 기본 primary ascending 조회 순서, deterministic pagination tie-break를 함께 제공합니다.
 - `ReadOnlyPersistence.around(...)`로 기존 persistence를 CQEngine 조회 전용으로 감쌀 수 있습니다.
-- ordering/materialization/query filtering 경로를 정리해 same-machine benchmark 기준 `NonOptimalIndexes`는 `753.779us -> 674.800us`, `NoIndexes`는 `1800.054us -> 1448.942us`까지 낮췄습니다.
-- benchmark runner는 이제 `--task`, `--warmup`, `--measurement` 인자를 지원해 특정 항목만 빠르게 재측정할 수 있습니다.
 
 ## 빌드 요구사항
 
@@ -120,6 +121,18 @@ identity와 기본 정렬 기준으로 함께 사용합니다.
 - primary key가 없는 persistence는 기존처럼 기본 순서를 보장하지 않습니다.
 
 명시적 `orderBy(...)`는 항상 이 기본 순서보다 우선하며, primary-keyed persistence에서는 primary key를 마지막 tie-breaker로 자동 추가합니다.
+
+primary-keyed persistence를 사용하는 `ConcurrentIndexedCollection`에서는 primary key로 단일 객체를 바로 조회할 수 있습니다.
+
+```java
+final ConcurrentIndexedCollection<Car> cars = new ConcurrentIndexedCollection<>(
+        OnHeapPersistence.onPrimaryKey(Car.CAR_ID)
+);
+
+cars.add(new Car(1, "Ford", "Focus"));
+
+final Car car = cars.getByPrimaryKey(1);
+```
 
 ### 읽기 전용 persistence
 
